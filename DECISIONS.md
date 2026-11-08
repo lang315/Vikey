@@ -5,6 +5,22 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 60. Word pairs as a real signal (experiment, branch exp/bigram-score)
+
+**Asked by Tony.** Try the ideas behind the offline Viterbi report (issue #111) without rewriting more than today, and measure on a held-out set that tuning never saw.
+
+**Proposed (not decided).**
+- Look-back asks word pairs first. Before an earlier tie word follows a switch, the pairs around it (the word before, which stays, and the word after, in the new language) vote; ~3x for the current reading keeps it, and the words before it. Both directions: "thì quên config" (was queen), "tất cả worth it" (was car), "Pro Max nhé" (was Mã). Look-back can only stop sooner, never reach further.
+- The word auto switch just turned Vietnamese is the previous word of the next one, for word pairs only (never retyped): "meeting với bên Risk" (was been). The word before a word put back to English is kept the same way for the English-mode look-back.
+- Word-pair table: pairs seen 3+ times (was 10+), tie word + next word 5+ (was 20+): 160k -> 432k pairs, front-coded (Engine.o 3.24 -> 3.57 MB; was going to be 7.7 MB as plain keys).
+- Pairs seen fewer than 6 times vote at most ~3x and don't overrule D22; that keeps "video call cos" (D22) and "la với ó" (D48, "với os" was seen 5 times).
+- Same sets as golden.py: chat lazy errors 37 -> 35, manual 58 -> 55; chat typos 47 -> 44, 71 -> 67; synthetic 64 -> 61, 111 -> 106; wrong words unchanged. Val split (D29) macro 0.110 -> 0.101% wrong words, every group better incl. all-caps.
+- Held-out set (2026-11-08, Gemini 3.5 Flash + GPT-5.4-mini, vikey-data `heldout/`), dev (tuned on): errors 68 -> 54, manual 102 -> 83. Locked test, looked at once: errors 54 -> 49, manual 87 -> 77, wrong 20 -> 17 (typos: 58 -> 55, 90 -> 84, 20 -> 19).
+- Per key: avg ~206 -> ~214 ns, p99.9 ~2.5 -> ~2.9 us (budget 1000 ns / 20 us).
+- New wrong words seen: "nên mix không" -> mĩ, "nhiều photos" -> phốt (synthetic), "lại list công việc" -> lít (test).
+
+**Status:** Experiment, PR open for Tony.
+
 ## 59. ":" and ";" after a space stay where they are (phone keyboards)
 
 **Status:** Shipped 2026-11-02 (Tony changed his mind on the earlier behavior).
