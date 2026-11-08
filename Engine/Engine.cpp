@@ -1319,6 +1319,7 @@ struct AsWord {
 static AsWord _asPrev[AS_LOOKBACK_WORDS];
 static int _asPrevCount = 0;
 static Uint32 _asConverted[MAX_BUFF]; static int _asConvertedN = 0;   //the word auto switch just put in Vietnamese
+static Uint32 _asConvertedKeys[MAX_BUFF]; static int _asConvertedKeysN = 0;   //and its keys (word-pair context for the next word)
 static void navForget();
 
 void vAutoSwitchForget() {
@@ -1329,7 +1330,23 @@ void vAutoSwitchForget() {
     _spaceCount = 0; _specialChar.clear(); _typingStates.clear();   //and Backspace can't reopen a word from before it
     if (_asConvertedN > 0) {   //except the word auto switch just turned Vietnamese: it is on screen before the break key,
         //so Backspace over that key reopens it like a word typed in Vietnamese ("treen " ⌫ + s -> "trến")
-        _typingStates.push_back(vector<Uint32>(_asConverted, _asConverted + _asConvertedN)); _spaceCount = 1; _asConvertedN = 0;
+        _typingStates.push_back(vector<Uint32>(_asConverted, _asConverted + _asConvertedN)); _spaceCount = 1;
+#ifndef AS_SWITCH_CONTEXT
+#define AS_SWITCH_CONTEXT 1
+#endif
+#if AS_SWITCH_CONTEXT
+        //and it is the word before the next one, for word pairs only ("meeting với bên": "với bên", not "với been").
+        //Never part of a look-back: it is not ambiguous here, so no switch ever retypes it
+        if (_asConvertedKeysN > 0 && _asConvertedKeysN < MAX_BUFF && _asConvertedN < MAX_BUFF) {
+            AsWord& w = _asPrev[0];
+            memcpy(w.raw, _asConvertedKeys, _asConvertedKeysN * sizeof(Uint32)); w.rawCount = _asConvertedKeysN;
+            for (int x = 0; x < _asConvertedN; x++) w.shown[x] = GET(_asConverted[x]);
+            w.shownCount = _asConvertedN;
+            w.en = w.vn = AS_MISSING; w.lookbackOk = false; w.same = false;
+            _asPrevCount = 1;
+        }
+#endif
+        _asConvertedN = 0; _asConvertedKeysN = 0;
     }
 }
 
@@ -1430,15 +1447,34 @@ int vAutoSwitchLastSide = -1;
 #ifndef AS_BIGRAM_W
 #define AS_BIGRAM_W 2.0f   //tuned on the val split (D29): 1 -> 0.128%, 2 -> 0.124%, 3 -> 0.124% wrong words
 #endif
+#ifndef AS_PAIR_SMOOTH
+#define AS_PAIR_SMOOTH 0.5   //added to both pair counts before the ratio (4 vs 0 is 9x); tried 1, 2, 3, 5: all worse on val
+#endif
 static std::unordered_map<std::string, int>* _asBigrams = nullptr;   //loaded at run time (tests) instead of the built-in table
 static float _asBigramWeight = AS_BIGRAM_W;
 static int _asBigramMin = 3;
 static int asBuiltInPair(const std::string& key) {
-    int lo = 0, hi = kBigramCount - 1;
+    //front-coded table (build_bigrams.py): find the last block whose first key is <= key, then walk that block
+    const char* k = key.c_str();
+    int lo = 0, hi = kBigramBlockCount - 1, block = -1;
     while (lo <= hi) {
-        int mid = (lo + hi) / 2, c = strcmp(kBigramKeys + kBigramOffsets[mid], key.c_str());
-        if (c == 0) return (int)lround(exp2(kBigramLogCounts[mid] / 8.0));
-        if (c < 0) lo = mid + 1; else hi = mid - 1;
+        int mid = (lo + hi) / 2, c = strcmp(kBigramData + kBigramBlocks[mid], k);
+        if (c == 0) return (int)lround(exp2(kBigramLogCounts[mid * kBigramBlockSize] / 8.0));
+        if (c < 0) { block = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    if (block < 0 || key.size() >= 256) return 0;
+    char cur[256];
+    const unsigned char* p = (const unsigned char*)kBigramData + kBigramBlocks[block];
+    size_t n = strlen((const char*)p);
+    if (n >= sizeof cur) return 0;
+    memcpy(cur, p, n + 1); p += n + 1;
+    for (int j = 1, idx = block * kBigramBlockSize + 1; j < kBigramBlockSize && idx < kBigramCount; j++, idx++) {
+        size_t shared = *p++, rest = strlen((const char*)p);
+        if (shared + rest >= sizeof cur) return 0;
+        memcpy(cur + shared, p, rest + 1); p += rest + 1;
+        int c = strcmp(cur, k);
+        if (c == 0) return (int)lround(exp2(kBigramLogCounts[idx] / 8.0));
+        if (c > 0) return 0;   //sorted: gone past it
     }
     return 0;
 }
@@ -1499,8 +1535,31 @@ static int asTrigramVote(const char* p2Letters, const bool& p2Vietnamese, const 
     return (int)lround(v * _asTrigramWeight);
 }
 
+#ifndef AS_PAIR_STRONG_MIN
+#define AS_PAIR_STRONG_MIN 6    //a pair seen this often is well attested ("call có" 4x does not overrule D22, "server bên" 6x does)
+#endif
+#ifndef AS_PAIR_FLOOR_MIN
+#define AS_PAIR_FLOOR_MIN 0    //how often a pair must be seen to overrule a common Vietnamese word (AS_VN_FLOOR); 0: any (tuned: 6, 10 cost 0.002 points on val)
+#endif
+#ifndef AS_PAIR_D22_MIN
+#define AS_PAIR_D22_MIN AS_PAIR_STRONG_MIN     //only a well-attested pair overrules D22 (a tie after a clearly English word)
+#endif
+#ifndef AS_PAIR_CAP_MIN
+#define AS_PAIR_CAP_MIN AS_PAIR_STRONG_MIN     //rarer pairs vote at most AS_PAIR_WEAK_CAP
+#endif
+static int _asPairTotal = 0;    //both pair counts behind the last asBigramVote
+#ifndef AS_PAIR_WEAK_CAP
+#define AS_PAIR_WEAK_CAP 5      //a pair seen fewer times than that votes at most this much (5 = ~3x) before the weight
+#endif
+/** 10*log10 of the count ratio, at most +-30, and at most +-AS_PAIR_WEAK_CAP for rarely seen pairs. */
+static double asPairRatio(const int& cv, const int& ce, const bool& capRare = true) {
+    double v = 10 * log10((cv + AS_PAIR_SMOOTH) / (ce + AS_PAIR_SMOOTH));
+    double cap = capRare && cv + ce < AS_PAIR_CAP_MIN ? AS_PAIR_WEAK_CAP : 30;
+    return v > cap ? cap : v < -cap ? -cap : v;
+}
 /** > 0: the Vietnamese reading follows prev more often, < 0: the English one (10 = 10x); 0: no data. */
 static int asBigramVote(const char* prevLetters, const bool& prevVietnamese, const char* letters) {
+    _asPairTotal = 0;
     if (_asBigramWeight <= 0) return 0;
     std::string p, vn;
     if (!asSurface(prevLetters, prevVietnamese, p) || !asSurface(letters, true, vn)) return 0;
@@ -1509,10 +1568,9 @@ static int asBigramVote(const char* prevLetters, const bool& prevVietnamese, con
         if (!_asBigrams) return asBuiltInPair(key);
         auto it = _asBigrams->find(key); return it == _asBigrams->end() ? 0 : it->second; };
     int cv = get(vn), ce = get(letters);
+    _asPairTotal = cv + ce;
     if (cv + ce < _asBigramMin) return 0;
-    double v = 10 * log10((cv + 0.5) / (ce + 0.5));
-    if (v > 30) v = 30; if (v < -30) v = -30;
-    return (int)lround(v * _asBigramWeight);
+    return (int)lround(asPairRatio(cv, ce) * _asBigramWeight);
 }
 
 // ---- Capitalised mid-sentence ties (D37) ------------------------------------------------------------------
@@ -1570,9 +1628,40 @@ static int asNextPairVote(const char* prevLetters, const char* nextLetters) {
         auto it = _asBigrams->find(key); return it == _asBigrams->end() ? 0 : it->second; };
     int cv = get(pv), ce = get(prevLetters);
     if (cv + ce < _asBigramMin) return 0;
-    double v = 10 * log10((cv + 0.5) / (ce + 0.5));
+    return (int)lround(asPairRatio(cv, ce) * _asBigramWeight);
+}
+
+// ---- Word pairs in look-back (exp/bigram-score) -----------------------------------------------------------
+// Look-back puts an earlier tie word back to English when a later word switches ("thí makes" -> "this makes").
+// The pair evidence around that earlier word was not asked: "với bên London" became "với been London",
+// "tất cả worth it" -> "tất car worth it". Before a tie word follows a switch, its word pairs vote: with the
+// word before it (which stays as it is) and with the word after it (shown in the new language).
+#ifndef AS_LB_PAIR_GUARD
+#define AS_LB_PAIR_GUARD 5    //how sure (5 = ~3x; tuned: 3, 5, 10 within 0.001 points on val) the pairs must be of the current reading to keep the earlier word
+#endif
+static int asPairCount(const std::string& a, const std::string& b) {
+    std::string key = a + "\t" + b;
+    if (!_asBigrams) return asBuiltInPair(key);
+    auto it = _asBigrams->find(key); return it == _asBigrams->end() ? 0 : it->second;
+}
+/** > 0: the Vietnamese reading of letters fits between before and after (surfaces, "" = none) better than the
+ *  English one (10 = 10x), < 0: the English one; 0 without data. Previous-word and next-word pairs add up. */
+static int asPairVoteAround(const std::string& before, const char* letters, const std::string& after) {
+    if (_asBigramWeight <= 0) return 0;
+    std::string vn;
+    if (!asSurface(letters, true, vn)) return 0;
+    double v = 0; bool any = false;
+    if (!before.empty()) {
+        int cv = asPairCount(before, vn), ce = asPairCount(before, letters);
+        if (cv + ce >= _asBigramMin) { v += asPairRatio(cv, ce, false); any = true; }
+    }
+    if (!after.empty()) {
+        int cv = asPairCount(vn, after), ce = asPairCount(letters, after);
+        if (cv + ce >= _asBigramMin) { v += asPairRatio(cv, ce, false); any = true; }
+    }
+    if (!any) return 0;
     if (v > 30) v = 30; if (v < -30) v = -30;
-    return (int)lround(v * _asBigramWeight);
+    return (int)lround(v);
 }
 
 static void asRememberWord() {
@@ -1797,7 +1886,7 @@ static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
             if (_asPrevCount >= 2 && asRawWord(_asPrev[1].raw, _asPrev[1].rawCount, p2raw))
                 vote = asTrigramVote(p2raw, !_asPrev[1].same, praw, !_asPrev[0].same, raw);
             if (vote == 0) vote = asBigramVote(praw, !_asPrev[0].same, raw);
-            if (vote != 0) return en - vn - vote >= AS_PREFER && (vn < AS_VN_FLOOR || vote <= -AS_PREFER);
+            if (vote != 0) return en - vn - vote >= AS_PREFER && (vn < AS_VN_FLOOR || (vote <= -AS_PREFER && _asPairTotal >= AS_PAIR_FLOOR_MIN));
         }
     }
     if (en != AS_MISSING && vn != AS_MISSING && en - vn >= AS_TIE_PREV && _asPrevCount >= 1 &&
@@ -1846,8 +1935,10 @@ static bool asHyphenRestore() {
 bool vAutoSwitchPrevRestored = false;        //previous[0] of the next English-word check is a word auto switch put back to English
 Uint32 vAutoSwitchRestoredKeys[MAX_BUFF];   //the keys of the word just put back to English (D35: a later word can look back on it)
 int vAutoSwitchRestoredCount = 0;
+static std::string _asRestoredBefore;   //the word before the one just put back to English, as shown (word-pair context, D35)
 static void asRestoreToEnglish(const int& handleCode, bool literalOnly) {
     vAutoSwitchRestoredCount = 0;
+    _asRestoredBefore.clear();
     if (_stateIndex > 0 && _stateIndex < MAX_BUFF) {
         memcpy(vAutoSwitchRestoredKeys, KeyStates, _stateIndex * sizeof(Uint32));
         vAutoSwitchRestoredCount = _stateIndex;
@@ -1859,6 +1950,17 @@ static void asRestoreToEnglish(const int& handleCode, bool literalOnly) {
     bool acronym = !asFewCapitals(KeyStates, _stateIndex);
     while (!literalOnly && !acronym && back < _asPrevCount && _asPrev[back].lookbackOk &&
            newCount + _asPrev[back].rawCount + 1 < MAX_BUFF && deleteCount + _asPrev[back].shownCount + 1 < MAX_BUFF) {
+#if AS_LB_PAIR_GUARD > 0
+        if (!_asPrev[back].same) {   //word pairs around it say it is the Vietnamese word: it stays, and so do the ones before
+            char w[AS_KEY_LEN], o[AS_KEY_LEN];
+            std::string before, after;
+            if (asRawWord(_asPrev[back].raw, _asPrev[back].rawCount, w)) {
+                if (back + 1 < _asPrevCount && asRawWord(_asPrev[back + 1].raw, _asPrev[back + 1].rawCount, o)) asSurface(o, !_asPrev[back + 1].same, before);
+                if (back == 0 ? asRawWord(KeyStates, _stateIndex, o) : asRawWord(_asPrev[back - 1].raw, _asPrev[back - 1].rawCount, o)) after = o;
+                if (asPairVoteAround(before, w, after) >= AS_LB_PAIR_GUARD) break;
+            }
+        }
+#endif
         newCount += _asPrev[back].rawCount + 1;
         deleteCount += _asPrev[back].shownCount + 1;
         back++;
@@ -1868,6 +1970,14 @@ static void asRestoreToEnglish(const int& handleCode, bool literalOnly) {
         newCount -= _asPrev[back].rawCount + 1;
         deleteCount -= _asPrev[back].shownCount + 1;
     }
+#if AS_LB_PAIR_GUARD > 0
+    {   //what the word before the restored one shows now: an earlier word that follows the switch is English
+        char o[AS_KEY_LEN];
+        if (back > 0) { if (asRawWord(_asPrev[back - 1].raw, _asPrev[back - 1].rawCount, o)) _asRestoredBefore = o; }
+        else if (_asPrevCount > 0 && asRawWord(_asPrev[0].raw, _asPrev[0].rawCount, o) && !asSurface(o, !_asPrev[0].same, _asRestoredBefore))
+            _asRestoredBefore.clear();
+    }
+#endif
     Uint32 out[MAX_BUFF];
     int n = 0;
     vAutoSwitchUndoCount = 0;
@@ -2010,13 +2120,16 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     int vn = asReplay(keys, count, result, resultCount, NULL, states);
     //word pairs (D30): "cho con bus" -> bú, "the bus" stays
     int pairVote = 0;
+    bool pairOverridesD22 = true;
     if ((_asBigramWeight > 0 || _asTrigrams) && en != AS_MISSING && vn != AS_MISSING && previousN >= 1 && previousCounts[0] >= 1) {
         char praw[AS_KEY_LEN];
         char p2raw[AS_KEY_LEN];
         if (asRawWord(previous[0], previousCounts[0], praw)) {
+            _asPairTotal = 0;
             if (previousN >= 2 && previousCounts[1] >= 1 && asRawWord(previous[1], previousCounts[1], p2raw))
                 pairVote = asTrigramVote(p2raw, false, praw, false, raw);
             if (pairVote == 0) pairVote = asBigramVote(praw, false, raw);
+            pairOverridesD22 = _asPairTotal >= AS_PAIR_D22_MIN;   //a rare pair doesn't overrule D22
         }
     }
     int capVote = 0;   //D37: a capitalised word mid-sentence goes with the capitalised reading real text uses
@@ -2045,7 +2158,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
 #ifndef AS_PAIR_OVERRIDES_D22
 #define AS_PAIR_OVERRIDES_D22 10   //word pairs this sure of the Vietnamese reading (10x) beat D22: "team bên US" (D34)
 #endif
-    if (en != AS_MISSING && previousN >= 1 && previousCounts[0] >= 1 && pairVote < AS_PAIR_OVERRIDES_D22 && !vAutoSwitchPrevRestored && capVote < AS_CAP_MARGIN) {
+    if (en != AS_MISSING && previousN >= 1 && previousCounts[0] >= 1 && (pairVote < AS_PAIR_OVERRIDES_D22 || !pairOverridesD22) && !vAutoSwitchPrevRestored && capVote < AS_CAP_MARGIN) {
         char praw[AS_KEY_LEN];
         Uint32 tmp[MAX_BUFF]; int tmpCount;
         if (asRawWord(previous[0], previousCounts[0], praw)) {
@@ -2080,6 +2193,17 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
             break;                //only ambiguous words that were kept English follow the switch (or, D35, ones the
                                   //word after them clearly reads as Vietnamese: "em í ạ", "hết cả mood")
         }
+#if AS_LB_PAIR_GUARD > 0
+        if (changed) {            //word pairs around it say it is the English word: "pro max nhé" keeps max (not "pro mã nhé")
+            std::string before, after;
+            char o[AS_KEY_LEN];
+            if (back + 1 < previousN && asRawWord(previous[back + 1], previousCounts[back + 1], o)) before = o;
+            else if (back == 0 && vAutoSwitchPrevRestored) before = _asRestoredBefore;   //typed in Vietnamese mode, before the switch
+            if (back == 0) asSurface(raw, true, after);
+            else if (asRawWord(previous[back - 1], previousCounts[back - 1], o)) asSurface(o, true, after);
+            if (asPairVoteAround(before, praw, after) <= -AS_LB_PAIR_GUARD) break;
+        }
+#endif
         if (resultCount + n + earlierCount[back] + 1 >= MAX_BUFF || deleteCount + pc + 1 >= MAX_BUFF) break;
         n += earlierCount[back] + 1;
         deleteCount += pc + 1;
@@ -2098,7 +2222,8 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     }
     for (int x = 0; x < resultCount; x++) out[n++] = result[x];
     for (int x = 0; x < count; x++) vAutoSwitchUndoData[vAutoSwitchUndoCount++] = keys[x];
-    memcpy(_asConverted, states, resultCount * sizeof(Uint32)); _asConvertedN = resultCount;   //vAutoSwitchForget picks it up when the app switches
+    memcpy(_asConverted, states, resultCount * sizeof(Uint32)); _asConvertedN = resultCount;
+    memcpy(_asConvertedKeys, keys, count * sizeof(Uint32)); _asConvertedKeysN = count;   //vAutoSwitchForget picks it up when the app switches
 
     hCode = vRestore;          //platform sends the new text, then the break key itself
     hBPC = (Byte)deleteCount;

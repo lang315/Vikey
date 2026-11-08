@@ -212,3 +212,8 @@ D19	1	terrazzo 	terrazzo 	0	z remains literal evidence after a doubled-key switc
 D19	1	Terrazzo 	Terrazzo 	0	z remains literal evidence after a doubled-key switch to English
 D19	1	terrorizer 	terrorizer 	0	z remains literal evidence after a doubled-key switch to English
 D19	1	Terrorizer 	Terrorizer 	0	z remains literal evidence after a doubled-key switch to English
+D60	1	upgrade thif queen config 	upgrade thì quên config 	0	look-back asks word pairs first: "thì quên" keeps quên when config switches to English (exp/bigram-score)
+D60	1	taats car worth it 	tất cả worth it 	0	same: "tất cả", not "tất car"
+D60	1	mua Pro Max nhes 	mua Pro Max nhé 	1	the other way: "pro max" keeps Max when nhé turns Vietnamese (the word before the switch counts)
+D60	0	meeting voiws been Risk 	meeting với bên Risk 	0	the word auto switch just turned Vietnamese is the word before the next one: "với bên"
+D60	1	server been London 	server bên London 	1	more word pairs (seen 3+ times, was 10+): "server bên" beats D22

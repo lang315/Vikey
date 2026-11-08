@@ -669,7 +669,7 @@ Upgrade sẽ down thêm 5 phút nữa, ready chưa?	Upgrade sẽ down thêm 5 ph
 Oke, notify team rồi	Oke, notify team rồi
 Application logs toàn error 500, không rõ nguyên nhân	Application logs toàn error 500, không rõ nguyên nhân
 Stack trace đâu?	Stack trace đâu?
-Logger bị turn off mất, upgrade thì queen config lại	Logger bị turn off mất, upgrade thì quên config lại
+Logger bị turn off mất, upgrade thì quên config lại	Logger bị turn off mất, upgrade thì quên config lại
 Thế là có thể rollback ngay mà	Thế là có thể rollback ngay mà
 Deploy again with proper logging enabled	Deploy again with proper logging enabled
 Bác nào commit cái thay đổi logger đó?	Bác nào commit cái thay đổi logger đó?
@@ -1290,7 +1290,7 @@ Con sẽ cố gắng về, nhưng còn tuỳ công việc	Con sẽ cố gắng v
 Công việc gì hoài vậy? Công ty có quá nhiều việc không?	Công việc gì hoài vậy? Công ty có quá nhiều việc không?
 Không phải vậy mẹ, chỉ là có dự án deadline sắp tới thôi	Không phải vậy mẹ, chỉ là có dự án deadline sắp tới thôi
 Thôi được, con ưu tiên công việc trước, mẹ hiểu	Thôi được, con ưu tiên công việc trước, mẹ hiểu
-Mày có làm xong assignment của moon Data Structure chưa	Mày có làm xong assignment của môn Data Structure chưa
+Mày có làm xong assignment của môn Data Structure chưa	Mày có làm xong assignment của môn Data Structure chưa
 Chưa bro, còn 2 ngày nữa mà
 2 	Chưa bro, còn 2 ngày nữa mà
 2 
