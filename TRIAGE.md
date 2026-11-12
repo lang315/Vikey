@@ -55,7 +55,9 @@ No reproduction label is added when no attempt was made, for example when it nee
    runs other code). Then approve, comment, or request changes.
 3. A PR that adds a feature or changes behaviour (what is typed, when auto switch triggers, what the app shows)
    must include a screenshot or a short demo video of the new behaviour. Without one, ask for it in a comment and
-   request changes; the PR is not approved until it is there.
+   request changes; the PR is not approved until it is there. On this fork (lang315/Vikey, personal) the screenshot
+   or video is optional: a before/after table from the test harness and the `Tools/autoswitch/check.sh` output are
+   enough.
 4. Code from contributors is read, never run on maintainer machines. CI for a PR from a fork is approved to run when
    the PR is triaged: it runs on GitHub-hosted runners, without secrets and with a read-only token.
 5. CodeRabbit reviews every PR automatically ([.coderabbit.yaml](.coderabbit.yaml)), and a bot comment compares the
