@@ -1199,6 +1199,10 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
     
     //if is mark key
     if (IS_MARK_KEY(data)) {
+        //a tone after a stretched ending ("goyyyyyf", D63): the letters before the run are matched, not the run
+        Byte whole = _index;
+        int stretch = asStretchStart(3);   //two are a slip, as at the end of the word (D10)
+        if (stretch >= 0) _index = (Byte)(stretch + 1);
         for (auto& vowelEntry : _vowelForMark) {
             vector<vector<Uint16>>& charset = vowelEntry.second;
             isCorect = false;
@@ -1211,6 +1215,7 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
                 checkCorrectVowel(charset, l, k, data);
 
                 if (isCorect) {
+                    _index = whole;   //insertMark leaves the run out itself
                     isChanged = true;
                     if (IS_KEY_S(data))
                         insertMark(MARK1_MASK);
@@ -1230,6 +1235,7 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
                 break;
             }
         }
+        _index = whole;
 
         if (!isChanged) {
             insertKey(data, isCaps);
@@ -1914,6 +1920,22 @@ static bool asStretchedVietnamese() {
     return en == AS_MISSING || !(vn == AS_MISSING || (vn < AS_VN_FLOOR && en - vn >= AS_PREFER) || en - vn >= AS_VN_EXTREME);
 }
 
+/** A tone typed after a stretched ending ("goyyyyyf", D63): the whole word is no syllable, so the tone key would be a
+ *  letter. The syllable before the run decides instead, as if the tone came before it; insertMark leaves the run out. */
+static bool asStretchTakesTone() {
+    int s = asStretchStart(3);   //as in handleMainKey
+    if (s < 0) return false;
+    Byte whole = _index;
+    bool savedTemp = tempDisableKey;   //also set by a Telex undo, not only by spell check
+    _index = (Byte)(s + 1);
+    checkSpelling();
+    bool syllable = !tempDisableKey;
+    _index = whole;
+    checkSpelling();   //the check of the whole word back
+    tempDisableKey = savedTemp;
+    return syllable;
+}
+
 /** Before a hyphen: a rare w-word ("ưi") starts an English compound ("Wi-Fi", D23). */
 static bool asHyphenRestore() {
     if (!asEnabled() || !_asWordStartOk || _stateIndex < 2 || _stateIndex < _index) return false;
@@ -2380,6 +2402,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         }
 
         insertState(data, _isCaps); //save state
+        if (tempDisableKey && IS_MARK_KEY(data) && asStretchTakesTone()) tempDisableKey = false;   //"goyyyyyf" (D63)
         
         if (!IS_SPECIALKEY(data) || tempDisableKey) { //do nothing
             hCode = vDoNothing;
