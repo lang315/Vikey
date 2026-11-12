@@ -5,6 +5,14 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 62. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
+
+**Status:** Bug fix, in review (2026-11-12).
+
+**Problem.** A word that starts with a toned vowel, followed by the Telex undo, sent a character the apps can't type: "oroo" (ỏ, ổ, then the undo), "asaa", "eree", "orww", "asww", "urww". The undo handed back the letter as a key code that still had its tone, and no key code has a tone, so the Mac app (and Driver.cpp on iPhone and Android) typed character 0 instead of "ỏ". The next key then deleted one character too many. With a consonant before the vowel ("toroo") the tone check that runs next sent the letter again correctly, which hid the bug. It shows up when people stretch a word: "ỏoooo", "áaaa".
+
+**Fix.** `insertAOE` and `insertW` send the restored letter as a character (`GET`), like every other output path. Cases tagged D62 in `rules.tsv`.
+
 ## 61. Backspace after a fixed word: the first takes the space, the second undoes
 
 **Status:** Shipped in 1.0.33 (Mac), 2026-11-12. Tony approved it (a user's report, via Tony). Live test on the Mac app: 26/26.

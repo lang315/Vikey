@@ -921,7 +921,7 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 //restore and disable temporary
                 hCode = vRestore;
                 TypingWord[ii] &= ~TONE_MASK;
-                hData[_index - 1 - ii] = TypingWord[ii];
+                hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D62)
                 //_index = 0;
                 if (data != KEY_O) //case thoòng
                     tempDisableKey = true;
@@ -1031,7 +1031,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
                     } else {
                         hCode = vRestore;
                         TypingWord[ii] &= ~TONEW_MASK;
-                        hData[_index - 1 - ii] = TypingWord[ii];
+                        hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ở" -> "ỏ"), as above (D62)
                         isRestoredW = true;
                         //_index++;
                     }

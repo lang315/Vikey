@@ -220,3 +220,10 @@ D60	1	chi phis 	chi phí 	1	never when the letters are a Vietnamese word: phis (
 D60	0	chi phis 	chi phí 	1	same in EN mode
 D60	1	thans 	thán 	1	a guessed form that isn't a real English word stays Vietnamese
 D60	0	crypto nos volatile 	crypto nó volatile 	1	words already in the frequency list keep their own score: D22's nos -> nó stays
+D62	1	a oroo	a ỏo	1	undoing â/ê/ô on a toned first letter: the letter comes back as a character, not a key code (was NUL)
+D62	1	a asaa	a áa	1	same with a
+D62	1	a eree	a ẻe	1	same with e
+D62	1	a toroo	a tỏo	1	with a consonant before it already worked
+D62	1	a orww	a ỏw	1	undoing ơ on a toned first letter (w twice): same fix
+D62	1	a asww	a áw	1	same with ă
+D62	1	a urww	a ủw	1	same with ư
