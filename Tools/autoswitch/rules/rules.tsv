@@ -234,3 +234,19 @@ D63	1	ddoosooo	đóooo	1	same: was đooóo
 D63	1	a orooooo	a ỏoooo	1	same at the start of a word: was oooỏo
 D63	1	xooofng	xoòng	1	a consonant after the oo: the tone goes back to the second o (xoòng, boóng)
 D63	1	boosong	boóng	1	same
+D63	1	thefmmmmm 	thèmmmmm 	1	a stretched Vietnamese word stays Vietnamese at its end (was put back to its keys and switched to English)
+D63	1	gofyyyyy 	gòyyyyy 	1	same, teencode gòy (D53)
+D63	1	orooooo 	ỏoooo 	1	same, after the Telex undo of ô
+D63	1	gifiii 	gìiii 	1	the stretched i is the i of gi
+D63	1	cuaraaa 	củaaa 	1	the tone stays on the u: the stretched a is no end consonant
+D63	1	ddaayyyy 	đâyyyy 	1	was put back to its keys (restore if wrong spelling)
+D63	1	khoongggg 	khôngggg 	1	same
+D63	1	uwfmmmm 	ừmmmm 	1	same
+D63	1	thefmmmmm, tooi ddi	thèmmmmm, tôi đi	1	at a comma too, and the next words stay Vietnamese
+D63	1	thefmmmmm the best test 	thèmmmmm the best test 	0	English words after it don't pull it back to its keys (look-back)
+D63	1	beennnn 	bênnnn 	1	the keys once stretched are both (been / bên): decided as for the word itself
+D63	1	testtt 	testtt 	0	same: test is English
+D63	1	besttt 	besttt 	0	same
+D63	1	THEFMMMM 	THEFMMMM 	0	2+ capitals keep the acronym rule (D23)
+D63	1	yesss 	yess 	0	a stretched tone key is no stretched letter: doubled tone key as before (D5.1)
+D63	1	hoyyyyy 	hoyyyyy 	1	unchanged: no Telex in it

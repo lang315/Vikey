@@ -7,13 +7,26 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 
 ## 63. Stretched Vietnamese words stay Vietnamese: "thèmmmm", "gòyyyy", "ỏoooo"
 
-**Status:** In progress (2026-11-12). The first part, the tone while typing, is done. The end of the word is next.
+**Status:** Done in the engine, in review (2026-11-12). Live test on the Mac app still to do.
 
 **Problem.** People stretch the last sound of a word in chat: "thèmmmm", "gòyyyy", "đâyyyy", "ỏoooo". The test used the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. For the 2326 words whose last letter isn't a/e/o, only 462 came out right. 1071 were put back to their keys and switched to English, and 793 were put back to their keys. While typing, the tone also jumped onto the stretched letters: "gòy" + y gave "goyỳ", "quá" + aa gave "quaaá".
 
-**Fix, part 1: the tone while typing.** The end of a word can repeat one letter two or more times: the same letter with the same ^ / ˘ ˀ, with a tone allowed only on the first copy, and only a letter that can end a syllable (a e i o u y c g h m n p t). Such a run is a stretched ending (`asStretchStart`), and the copies after the first are no part of the vowels when the tone is placed. "gòyyy", "hàyyyy", "quáaa", "đóooo", "ỏoooo". A consonant after "oo" brings the usual placement back ("xoòng", "boóng"). The Telex keys s f r x j w z d are never stretched letters, so doubled tone keys (D5.1, D19) are unchanged.
+**Stretched ending** (`asStretchStart`). The end of a word repeats one letter: the same letter with the same ^ / ˘ ˀ, with a tone allowed only on the first copy ("ưu" in "cứu" is no run). Only letters that can end a syllable count: a e i o u y c g h m n p t. The Telex keys s f r x j w z d are never stretched letters, so doubled tone keys (D5.1, D19) are unchanged.
 
-**Not covered.** A tone typed after the stretched letters ("goyyyyyf") is still typed as a letter: the word is no syllable by then.
+**Fix, part 1: the tone while typing.** From the 2nd copy, the tone goes where the syllable alone puts it. The copies are no part of the vowels, and the letter after the syllable doesn't count as an end consonant. "gòyyy", "hàyyyy", "quáaa", "đóooo", "ỏoooo", "củaaa", "gìiii". A consonant after "oo" brings the usual placement back ("xoòng", "boóng"). Telex lock: "gisi" gives "gíi" (was "gií"), and "cuwsuuuuu" gives "cứuuuuu".
+
+**Fix, part 2: the end of the word** (`asStretchedVietnamese`, at Space and at punctuation). It takes 3+ copies. Two are a slip: "khoongg" is still put back to its keys (D10), and the typo goldens are unchanged. When the syllable before the stretch passes spell check, the word is neither put back to its keys nor switched to English. Two exceptions:
+- The keys are an English word as typed, or the keys with the stretched letter once ("testtt" is "test"). Then the usual rule for a word that is both decides, with the syllable's Vietnamese score: "testtt", "besttt" stay English, "beennnn" gives "bênnnn".
+- 2+ capitals keep the acronym rule (D23): "THEFMMMM" as before.
+
+The word is remembered for look-back as not English, so English words after it don't pull it back ("thèmmmmm the best test").
+
+**Result.** Test set: the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. Stay Vietnamese and start with the word: 673 before, 2698 now. Test set of 5000 English words with two extra copies of the last letter: 24 changed, all to Vietnamese. Most give the same result as the word typed without the stretch: "last" is "lát", "been" is "bên", "worst" is "ướt", "moon" is "môn". "cara", "sara", "tara", "mere" are English when typed normally, but stretched give "cảaa", "sảaa", "tảaa", "mẻee". Goldens other than the Telex lock, metrics, the realistic typing slips and the Driver are unchanged. Rules D63.
+
+**Not covered.**
+- A tone typed after the stretched letters ("goyyyyyf") is still typed as a letter: the word is no syllable by then.
+- Stretching a/e/o after â/ê/ô, or o after ơ, is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo", "giờ" + ooo gives "giòoo". Telex keeps it (the lock pins "aaaa" to "aaa").
+- Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
 
 ## 62. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
 
