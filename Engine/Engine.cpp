@@ -203,7 +203,8 @@ static bool asTeencodeVowels(const int& from, const int& to) {
 
 /** A stretched ending (D63): "thèmmmm", "gòyyyy", "ỏoooo". Where the run of minRun+ same letters at the end of the
  *  word starts, or -1. Same letter, same ^ / ˘ ˀ (so the "ưu" of "cứu" is no run); only its first letter may have a tone.
- *  Only letters that can end a syllable: never the Telex keys s f r x j w z d, so doubled tone keys (D5.1, D19) stay. */
+ *  A run of plain o may start at an ơ ("ờoooo", D64). Only letters that can end a syllable: never the Telex keys
+ *  s f r x j w z d, so doubled tone keys (D5.1, D19) stay. */
 static int asStretchStart(const int& minRun) {
     if (_index < 2 || _index >= MAX_BUFF || _statesLost) return -1;
     const Uint32 odd = MARK_MASK | STANDALONE_MASK | CHAR_CODE_MASK;
@@ -214,10 +215,12 @@ static int asStretchStart(const int& minRun) {
           key == KEY_G || key == KEY_H || key == KEY_M || key == KEY_N || key == KEY_P || key == KEY_T)) return -1;
     Uint32 shape = last & (TONE_MASK | TONEW_MASK);
     int s = _index - 1;
-    while (s > 0 && CHR(s - 1) == key && (TypingWord[s - 1] & (TONE_MASK | TONEW_MASK)) == shape &&
-           !(TypingWord[s - 1] & (STANDALONE_MASK | CHAR_CODE_MASK))) {
+    while (s > 0 && CHR(s - 1) == key && !(TypingWord[s - 1] & (STANDALONE_MASK | CHAR_CODE_MASK))) {
+        Uint32 prev = TypingWord[s - 1] & (TONE_MASK | TONEW_MASK);
+        bool horn = key == KEY_O && !shape && prev == TONEW_MASK;
+        if (prev != shape && !horn) break;
         s--;
-        if (TypingWord[s] & MARK_MASK) break;   //the toned letter starts the run
+        if ((TypingWord[s] & MARK_MASK) || horn) break;   //the toned letter, or the ơ, starts the run
     }
     return s <= _index - minRun ? s : -1;
 }
@@ -935,8 +938,21 @@ void insertD(const Uint16& data, const bool& isCaps) {
     hNCC = hBPC;
 }
 
+static bool _hornBack = false;   //this key brought an ơ back with the o the ô took (D64)
+/** The ô at the end of the word was an ơ until the last o: its keys are o, w, o, with tone keys anywhere ("owfo").
+ *  Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D64). */
+static int hornTurnedHat() {
+    int x = _stateIndex - 2;
+    while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;
+    if (x < 1 || (KeyStates[x] & CHAR_MASK) != KEY_O) return -1;
+    int o = x--;
+    while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;
+    return x >= 0 && (KeyStates[x] & CHAR_MASK) == KEY_W ? o : -1;
+}
+
 void insertAOE(const Uint16& data, const bool& isCaps) {
     findAndCalculateVowel();
+    int hornO = -1;
     
     //remove W tone
     for (ii = VSI; ii <= VEI; ii++) {
@@ -953,6 +969,9 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 //restore and disable temporary
                 hCode = vRestore;
                 TypingWord[ii] &= ~TONE_MASK;
+                //"ờ" + oo is a stretched o: ơ + o gave ô ("tuowoj" is "tuộ"), the next o brings the ơ back with that o (D64)
+                if (data == KEY_O && ii == _index - 1 && _index < MAX_BUFF - 1 && (hornO = hornTurnedHat()) >= 0)
+                    TypingWord[ii] |= TONEW_MASK;
                 hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D62)
                 //_index = 0;
                 if (data != KEY_O) //case thoòng
@@ -971,6 +990,13 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
         }
     }
     hNCC = hBPC;
+    if (hornO >= 0) {   //the o the ô took, after the ơ (this o is added by the caller, vRestore)
+        _hornBack = true;
+        setKeyData(_index, KEY_O, KeyStates[hornO] & CAPS_MASK);
+        memmove(hData + 1, hData, hNCC * sizeof(hData[0]));
+        hData[0] = GET(TypingWord[_index++]);
+        hNCC++;
+    }
 }
 
 void insertW(const Uint16& data, const bool& isCaps) {
@@ -2255,6 +2281,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
     }
     if (_navSaved) navForget();
     _appendedStandalone = false;
+    _hornBack = false;
     _isCaps = (capsStatus == 1 || //shift
                capsStatus == 2); //caps lock
     bool literalOnly = false;
@@ -2442,7 +2469,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             }
         }
 
-        if (!IS_KEY_D(data)) {
+        if (!IS_KEY_D(data) && !_hornBack) {   //"ờoo": the tone is on the ơ already (D64)
             //moving the tone onto a just-added ư ("ís" + w -> "iứ"): that ư isn't on screen yet, so one fewer to delete
             //(it took the space before the word: "ab isw" gave "abiứ", D52)
             if (hCode == vDoNothing || _appendedStandalone) {
@@ -2452,7 +2479,9 @@ void vKeyHandleEvent(const vKeyEvent& event,
             }
         }
         
-        if (hCode == vRestore) {
+        if (hCode == vRestore && _hornBack) {
+            insertKey(data, _isCaps);   //every key is a letter again ("owfoo" is "ờoo"): no key dropped (D64)
+        } else if (hCode == vRestore) {
             insertKey(data, _isCaps);
             if (_stateIndex > 0 && vAutoSwitchRequest != 0) {
                 if (_asDropN == AS_MAX_DROPS) { memmove(_asDropPos, _asDropPos + 1, sizeof(int) * (AS_MAX_DROPS - 1)); memmove(_asDropKey, _asDropKey + 1, sizeof(Uint32) * (AS_MAX_DROPS - 1)); _asDropN--; }
