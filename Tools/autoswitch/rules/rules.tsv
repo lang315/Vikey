@@ -227,3 +227,10 @@ D62	1	a toroo	a tỏo	1	with a consonant before it already worked
 D62	1	a orww	a ỏw	1	undoing ơ on a toned first letter (w twice): same fix
 D62	1	a asww	a áw	1	same with ă
 D62	1	a urww	a ủw	1	same with ư
+D63	1	gofyyy	gòyyy	1	a stretched ending is no part of the vowels: the tone stays on the o (was goyyỳ)
+D63	1	hayfyyy	hàyyyy	1	same: was hayyyỳ
+D63	1	quasaaa	quáaa	1	same after the Telex undo of â: was quaaá
+D63	1	ddoosooo	đóooo	1	same: was đooóo
+D63	1	a orooooo	a ỏoooo	1	same at the start of a word: was oooỏo
+D63	1	xooofng	xoòng	1	a consonant after the oo: the tone goes back to the second o (xoòng, boóng)
+D63	1	boosong	boóng	1	same

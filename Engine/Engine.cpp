@@ -201,6 +201,27 @@ static bool asTeencodeVowels(const int& from, const int& to) {
     return plainA && plainB && ((a == KEY_I && b == KEY_E) || (a == KEY_O && b == KEY_Y && (!mark || mark == MARK2_MASK)));
 }
 
+/** A stretched ending (D63): "thèmmmm", "gòyyyy", "ỏoooo". Where the run of 2+ same letters at the end of the word
+ *  starts, or -1. Same letter, same ^ / ˘ ˀ (so the "ưu" of "cứu" is no run); only its first letter may have a tone.
+ *  Only letters that can end a syllable: never the Telex keys s f r x j w z d, so doubled tone keys (D5.1, D19) stay. */
+static int asStretchStart() {
+    if (_index < 2 || _index >= MAX_BUFF || _statesLost) return -1;
+    const Uint32 odd = MARK_MASK | STANDALONE_MASK | CHAR_CODE_MASK;
+    Uint32 last = TypingWord[_index - 1];
+    Uint16 key = CHR(_index - 1);
+    if (last & odd) return -1;
+    if (!(key == KEY_A || key == KEY_E || key == KEY_I || key == KEY_O || key == KEY_U || key == KEY_Y || key == KEY_C ||
+          key == KEY_G || key == KEY_H || key == KEY_M || key == KEY_N || key == KEY_P || key == KEY_T)) return -1;
+    Uint32 shape = last & (TONE_MASK | TONEW_MASK);
+    int s = _index - 1;
+    while (s > 0 && CHR(s - 1) == key && (TypingWord[s - 1] & (TONE_MASK | TONEW_MASK)) == shape &&
+           !(TypingWord[s - 1] & (STANDALONE_MASK | CHAR_CODE_MASK))) {
+        s--;
+        if (TypingWord[s] & MARK_MASK) break;   //the toned letter starts the run
+    }
+    return s < _index - 1 ? s : -1;
+}
+
 void checkSpelling(const bool& forceCheckVowel=false) {
     _teenRule = false;
     _spellingOK = false;
@@ -828,7 +849,10 @@ void insertMark(const Uint32& markMask, const bool& canModifyFlag) {
     
     findAndCalculateVowel();
     VWSM = 0;
-    
+    //a stretched ending ("gòyyy", "ỏooo", D63) is no part of the vowels: the tone stays where the syllable puts it
+    int stretch = asStretchStart();
+    if (stretch >= VSI && stretch < VEI) { vowelCount -= VEI - stretch; VEI = stretch; }
+
     //detect mark position
     if (vowelCount == 1) {
         VWSM = VEI;

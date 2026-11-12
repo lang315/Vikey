@@ -5,6 +5,16 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 63. Stretched Vietnamese words stay Vietnamese: "thèmmmm", "gòyyyy", "ỏoooo"
+
+**Status:** In progress (2026-11-12). The first part, the tone while typing, is done. The end of the word is next.
+
+**Problem.** People stretch the last sound of a word in chat: "thèmmmm", "gòyyyy", "đâyyyy", "ỏoooo". The test used the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. For the 2326 words whose last letter isn't a/e/o, only 462 came out right. 1071 were put back to their keys and switched to English, and 793 were put back to their keys. While typing, the tone also jumped onto the stretched letters: "gòy" + y gave "goyỳ", "quá" + aa gave "quaaá".
+
+**Fix, part 1: the tone while typing.** The end of a word can repeat one letter two or more times: the same letter with the same ^ / ˘ ˀ, with a tone allowed only on the first copy, and only a letter that can end a syllable (a e i o u y c g h m n p t). Such a run is a stretched ending (`asStretchStart`), and the copies after the first are no part of the vowels when the tone is placed. "gòyyy", "hàyyyy", "quáaa", "đóooo", "ỏoooo". A consonant after "oo" brings the usual placement back ("xoòng", "boóng"). The Telex keys s f r x j w z d are never stretched letters, so doubled tone keys (D5.1, D19) are unchanged.
+
+**Not covered.** A tone typed after the stretched letters ("goyyyyyf") is still typed as a letter: the word is no syllable by then.
+
 ## 62. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
 
 **Status:** Bug fix, in review (2026-11-12).
