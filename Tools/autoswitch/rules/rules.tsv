@@ -308,3 +308,5 @@ D67	1	]] 	] 	1	same for ]
 D67	1	u[[ 	u[ 	1	same after u
 D67	1	boww 	bow 	1	w w still undoes the ơ made with w
 D67	1	w[ 	ươ 	1	[ after a standalone w: ươ, as before
+D67	1	][w 	][w 	1	w undoes the ươ typed with ] [: both brackets come back (was "uow")
+D67	1	thw[w 	thu[w 	1	same with ư typed with w: the [ comes back; that ư turns into u, as w undoing ươ always did (was "thuow")

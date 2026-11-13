@@ -1023,7 +1023,10 @@ void insertW(const Uint16& data, const bool& isCaps) {
             hCode = vRestore;
             
             for (ii = VSI; ii < _index; ii++) {
-                TypingWord[ii] &= ~TONEW_MASK;
+                if ((TypingWord[ii] & BRACKET_MASK) && (TypingWord[ii] & TONEW_MASK))   //ơ / ư typed with [ ]: the bracket comes back (D67)
+                    TypingWord[ii] = (CHR(ii) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) | (TypingWord[ii] & CAPS_MASK);
+                else
+                    TypingWord[ii] &= ~TONEW_MASK;
                 hData[_index - 1 - ii] = GET(TypingWord[ii]) & ~STANDALONE_MASK;
             }
             isRestoredW = true;
