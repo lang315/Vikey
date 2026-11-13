@@ -5,6 +5,21 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 67. [ ] and w undoing each other's ơ / ư lost keys: "bow[", "[w"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** [ [ gives [ (the second [ undoes the ơ the first made), and w w gives w. But the undo also ran across keys:
+- [ or ] after an ơ / ư made with w took its place: "bow[" gave "b[", "buw]" and "bw]" gave "b]", "w]" gave "]". The o and w were lost.
+- w after an ơ / ư made with [ ] undid it as if it were made with w: "[w" gave "ow" (an o that wasn't typed), "]w" gave "w" (the ] lost).
+
+**Fix.** The ơ / ư remembers that a bracket made it (`BRACKET_MASK`, D65):
+- [ [ and ] ] undo only an ơ / ư the same bracket made. After one made with w, the bracket is typed after it: "bơ[", "bư]". A word that is no syllable is put back to all its keys at the space ("bow[").
+- w after an ơ / ư made with [ ] gives the bracket back: "[w", "]w", Shift+[ "{w".
+- [ [, ] ], u [ [, w w, o w w, w [ work as before. Cases tagged D67 in `rules.tsv`.
+
+**Not covered.** "w]" shows "ưư" until the space puts back "w]".
+
 ## 66. "Thuở" with a capital T came out "Thưở"
 
 **Status:** Done in the engine, in review (2026-11-13).

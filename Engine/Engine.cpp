@@ -1081,7 +1081,11 @@ void insertW(const Uint16& data, const bool& isCaps) {
                     //restore and disable temporary
                     if (TypingWord[ii] & STANDALONE_MASK) {
                         hCode = vWillProcess;
-                        if (CHR(ii) == KEY_U){
+                        if (TypingWord[ii] & BRACKET_MASK) {   //an ơ / ư typed with [ ]: w gives the bracket back ("[w", D67)
+                            hCode = vRestore;
+                            TypingWord[ii] = (CHR(ii) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) | (TypingWord[ii] & CAPS_MASK);
+                            isRestoredW = true;
+                        } else if (CHR(ii) == KEY_U){
                             TypingWord[ii] = KEY_W | ((TypingWord[ii] & CAPS_MASK) ? CAPS_MASK : 0);
                         } else if (CHR(ii) == KEY_O) {
                             hCode = vRestore;
@@ -1130,7 +1134,9 @@ void reverseLastStandaloneChar(const Uint32& keyCode, const bool& isCaps, const 
 
 static bool _afterDigit = false;   //the word started right after a digit: a lone w is a unit (100W), not ư (D33)
 void checkForStandaloneChar(const Uint16& data, const bool& isCaps, const Uint32& keyWillReverse) {
-    if (_index > 0 && CHR(_index - 1) == keyWillReverse && TypingWord[_index - 1] & TONEW_MASK) {   //w, [ or ] can start a word
+    //[ [ or ] ] undoes the ơ / ư the first one made; one made with w stays, the bracket comes after it ("bow[", D67)
+    if (_index > 0 && CHR(_index - 1) == keyWillReverse && TypingWord[_index - 1] & TONEW_MASK &&
+        (!IS_BRACKET_KEY(data) || (TypingWord[_index - 1] & BRACKET_MASK))) {   //w, [ or ] can start a word
         hCode = vWillProcess;
         hBPC = 1;
         hNCC = 1;
