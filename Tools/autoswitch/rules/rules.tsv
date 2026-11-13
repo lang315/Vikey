@@ -296,3 +296,17 @@ D66	1	Thuowr 	Thuở 	1	a capital T: "thuở" keeps the u plain, as in lowercase
 D66	1	tHuowr 	tHuở 	1	same for a capital H
 D66	1	thuowr 	thuở 	1	lowercase: unchanged
 D66	1	Thuowng 	Thương 	1	an n after it: ươ, as in lowercase (unchanged)
+D67	1	bow[ 	bow[ 	1	[ after an ơ made with w is a bracket after it, put back with all keys at the space (was "b[": the o and w lost)
+D67	1	buw] 	bư] 	1	same for ] after an ư made with w (was "b]")
+D67	1	bw] 	bư] 	1	same after a standalone w (was "b]")
+D67	1	w] 	w] 	1	same at the start of a word (was "]")
+D67	1	[w 	[w 	1	w undoes an ơ typed with [: the [ comes back, not an o that wasn't typed (was "ow")
+D67	1	]w 	]w 	1	same for ] (was "w": the ] lost)
+D67	1	~w 	{w 	1	same with Shift+[ (~ in the harness): Ơ undone gives { (was "Ow")
+D67	1	[[ 	[ 	1	[ [ still undoes the ơ the first [ made
+D67	1	]] 	] 	1	same for ]
+D67	1	u[[ 	u[ 	1	same after u
+D67	1	boww 	bow 	1	w w still undoes the ơ made with w
+D67	1	w[ 	ươ 	1	[ after a standalone w: ươ, as before
+D67	1	][w 	][w 	1	w undoes the ươ typed with ] [: both brackets come back (was "uow")
+D67	1	thw[w 	thu[w 	1	same with ư typed with w: the [ comes back; that ư turns into u, as w undoing ươ always did (was "thuow")
