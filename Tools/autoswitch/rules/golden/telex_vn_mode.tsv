@@ -1709,8 +1709,8 @@ cuoongf	cuồng 	0	1
 cuoongs	cuống 	0	1
 cuoonj	cuộn 	0	1
 cuoons	cuốn 	0	1
-cuooocf	cuoocf 	0	1
-cuooofc	cuoofc 	0	1
+cuooocf	cuoocf 	1	0
+cuooofc	cuoofc 	1	0
 cuoori	cuổi 	0	1
 cuoosc	cuốc 	0	1
 cuoosi	cuối 	0	1
@@ -5714,7 +5714,7 @@ moongf	mồng 	0	1
 moongj	mộng 	0	1
 moongs	mống 	0	1
 moons	moons 	1	0
-moooft	mooft 	0	1
+moooft	mooft 	1	0
 moootf	mootf 	0	1
 moor	mổ 	0	1
 moori	mổi 	0	1

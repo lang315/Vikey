@@ -324,3 +324,10 @@ D68	1	Huawei has a bug 	Huawei has a bug 	0	a capitalised word is a name, not a 
 D68	1	Casio tax 	Casio tax 	0	same (was "Casio tã")
 D68	1	car bajnn 	cả bajnn 	1	after a tie read as Vietnamese (cả) the slip stays Vietnamese too (was "car bajnn", English)
 D68	1	been bajnn ddi 	bên bajnn đi 	1	same after been / bên
+D68	1	Bajnn 	Bajnn 	1	a capitalised slip (start of a sentence) one key away from a word (Bạn) stays Vietnamese too (was English)
+D68	1	Cuxgn 	Cuxgn 	1	same: two letters swapped (Cũng)
+D68	1	Moitj 	Moitj 	1	same: a neighbouring key (Một)
+D68	1	Airbnb last minute 	Airbnb last minute 	0	a capitalised name no word one slip away still switches
+D68	1	Lyft has a bug 	Lyft has a bug 	0	a short name one dropped letter from a word (Lỳ) still switches: only a doubled letter may be dropped (review: was "Lyft há")
+D68	1	Deezer tax 	Deezer tax 	0	same (review: was "Deezer tã")
+D68	1	caraja has 	caraja has 	0	a word Telex undid a key of (a-a) is no slip: put back with every key and switched (since D68 it gave "caraj há")

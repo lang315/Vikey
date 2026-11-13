@@ -1470,14 +1470,13 @@ static inline int asEnglishScore(const char* word) {
     return s != AS_MISSING ? s : asEnglishForm(word);
 }
 
-/** Normalized key of the word in TypingWord; transformed = it has a tone, ^, w-horn/breve or đ. */
-static bool asWordKey(char* out, bool& transformed) {
+/** Normalized key of these characters (engine character data); transformed = a tone, ^, w-horn/breve or đ. */
+static bool asCharsKey(const Uint32* chars, const int& count, char* out, bool& transformed) {
     transformed = false;
-    if (_index == 0 || !wordFitsBuffer()) return false;
     int n = 0;
     char tone = 0;
-    for (int x = 0; x < _index; x++) {
-        Uint32 t = TypingWord[x];
+    for (int x = 0; x < count; x++) {
+        Uint32 t = chars[x];
         char c = asLetterOf(t);
         if (c == 0 || n + 3 >= AS_KEY_LEN) return false;
         out[n++] = c;
@@ -1502,6 +1501,13 @@ static bool asWordKey(char* out, bool& transformed) {
     }
     out[n] = 0;
     return true;
+}
+
+/** Normalized key of the word in TypingWord; transformed = it has a tone, ^, w-horn/breve or đ. */
+static bool asWordKey(char* out, bool& transformed) {
+    transformed = false;
+    if (_index == 0 || !wordFitsBuffer()) return false;
+    return asCharsKey(TypingWord, _index, out, transformed);
 }
 
 /** Lowercase letters of raw key codes; false if any key isn't a letter. */
@@ -1779,6 +1785,55 @@ static bool asHasLiteralWordShape(const Uint32* keys, int count, bool telexToneE
     return asHasInternalCapital(keys, count) || asHasSeparatedVowels(keys, count, telexToneEdits);
 }
 
+static Uint16 asKeyOfLetter(char c);
+/** A capitalised slip ("Bajnn" -> Bạnn, D68): the vowels typed are a Vietnamese vowel group, and one edit on the shown
+ *  word gives a Vietnamese word ("Bạn"): a doubled letter dropped, two letters swapped or a neighbouring key. Names
+ *  stay names: the vowels of Casio, Huawei, Serif are no Vietnamese group, and dropping any letter of a short name
+ *  ("Lyft" -> "Lỳ") is too easy a match, so only a repeated letter may go. */
+static bool asNearSyllable() {
+    static const char* groups[] = {"a", "e", "i", "o", "u", "y", "ai", "ao", "au", "ay", "eo", "eu", "ia", "ie", "io", "iu",
+        "oa", "oe", "oi", "ua", "ue", "ui", "uo", "uy", "ye", "iai", "iao", "iau", "iay", "ieo", "ieu", "ioi", "iua", "iuo",
+        "oai", "oay", "oeo", "uai", "uao", "uay", "ueo", "uoi", "uou", "uya", "uye", "uyu", "yeu"};   //gi- and qu- included
+    if (_index < 2 || _index >= MAX_BUFF) return false;
+    char vowels[AS_KEY_LEN];
+    int nv = 0;
+    for (int x = 0; x < _stateIndex && nv < AS_KEY_LEN - 1; x++) {
+        char c = asLetterOf(KeyStates[x]);
+        if ((c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' || c == 'y') && (nv == 0 || vowels[nv - 1] != c)) vowels[nv++] = c;
+    }
+    vowels[nv] = 0;
+    bool group = false;
+    for (const char* g : groups) if (strcmp(g, vowels) == 0) { group = true; break; }
+    if (!group) return false;
+    static const char* rows[] = {"qwertyuiop", "asdfghjkl", "zxcvbnm"};
+    Uint32 w[MAX_BUFF];
+    char key[AS_KEY_LEN];
+    bool transformed;
+    auto known = [&](int n) { return asCharsKey(w, n, key, transformed) && asVietnameseScore(key) != AS_MISSING; };
+    for (int x = 0; x < _index; x++) {
+        char c = asLetterOf(TypingWord[x]);
+        if (x > 0 && c == asLetterOf(TypingWord[x - 1])) {          //a doubled letter dropped
+            int n = 0;
+            for (int y = 0; y < _index; y++) if (y != x) w[n++] = TypingWord[y];
+            if (known(n)) return true;
+        }
+        memcpy(w, TypingWord, _index * sizeof(Uint32));               //swapped
+        if (x + 1 < _index) { w[x] = TypingWord[x + 1]; w[x + 1] = TypingWord[x]; if (known(_index)) return true; }
+        memcpy(w, TypingWord, _index * sizeof(Uint32));               //a neighbouring key
+        for (const char* row : rows) {
+            const char* at = c ? strchr(row, c) : NULL;
+            if (!at) continue;
+            int p = (int)(at - row), len = (int)strlen(row);
+            for (int q : {p - 1, p + 1}) {
+                if (q < 0 || q >= len) continue;
+                w[x] = (TypingWord[x] & ~CHAR_MASK) | asKeyOfLetter(row[q]);
+                if (known(_index)) return true;
+            }
+        }
+    }
+    return false;
+}
+
 static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
     if (!asEnabled() || !_asWordStartOk) return false;
     asInitLetters();
@@ -1890,16 +1945,18 @@ static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
         if (invalid) {
             //A lowercase marked word of one syllable is a slip in a Vietnamese word ("bajnn", "viejt", "thaasyy"), not
             //a foreign word: no switch, restore-if-wrong-spelling handles it like "khoongg" (D68). The syllable is
-            //counted past the Telex keys typed inside it, with the keys Telex undid ("Asana"). Not a capitalised word
-            //(names: "Huawei", "Casio"), not after a word that leans English ("This Airbnb"; "car bajnn" is "cả"),
+            //counted past the Telex keys typed inside it. Not when Telex undid a key on the way: that path would put
+            //the word back without it ("caraja" -> "caraj"). Not a capitalised word (names: "Huawei", "Casio") unless
+            //one slip from a word ("Bajnn") and restore-if-wrong-spelling puts it back to its keys, not after a word
+            //that leans English ("This Airbnb"; "car bajnn" is "cả"),
             //and not an English word with its last letter stretched ("testtt", D63).
             Uint32 full[MAX_BUFF];
             int n = asStatesWithDrops(full, MAX_BUFF - 1);
             size_t len = strlen(raw);
             while (len >= 2 && raw[len - 1] == raw[len - 2]) raw[--len] = 0;   //as in asStretchedVietnamese
             bool afterEnglish = _asPrevCount >= 1 && _asPrev[0].lookbackOk && _asPrev[0].en >= _asPrev[0].vn + AS_PLAIN_MARGIN;
-            return afterEnglish || (KeyStates[0] & CAPS_MASK) || asHasSeparatedVowels(full, n, true) ||
-                   asEnglishScore(raw) != AS_MISSING;
+            return afterEnglish || _asDropN > 0 || asHasSeparatedVowels(full, n, true) || asEnglishScore(raw) != AS_MISSING ||
+                   ((KeyStates[0] & CAPS_MASK) && !(vRestoreIfWrongSpelling && asNearSyllable()));
         }
         literalOnly = asHasLiteralWordShape(KeyStates, _stateIndex, true);
         return literalOnly;
