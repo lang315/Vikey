@@ -5,6 +5,16 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 66. "Thuở" with a capital T came out "Thưở"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** "thuowr" gives "thuở": after "th", w on "uo" puts the horn on the o only, unless an n follows ("thương"). With a capital T or H ("Thuowr", "tHuowr") it gave "Thưở". The check compared the whole letter, capital bit included, so a capital T was no T.
+
+**Fix.** The check compares the key only, as everywhere else: "Thuở", "tHuở"; the same for the q of "quở". Typing every Vietnamese syllable of the Telex lock with a capital first letter now gives the lowercase result capitalised (10966 of 10966; was 1 different). Cases tagged D66 in `rules.tsv`.
+
+**Not covered.** All caps: "OOOCX" gives "OOCX", not "OÕC" (the Telex undo of ô, another path).
+
 ## 65. Words typed with [ and ] (ơ, ư) work like the same words typed with w
 
 **Status:** Done in the engine, in review (2026-11-13).

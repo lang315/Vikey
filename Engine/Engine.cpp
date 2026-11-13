@@ -1033,12 +1033,12 @@ void insertW(const Uint16& data, const bool& isCaps) {
             hCode = vWillProcess;
             
             if ((CHR(VSI) == KEY_U && CHR(VSI+1) == KEY_O)) {
-                if (VSI - 2 >= 0 && TypingWord[VSI - 2] == KEY_T && TypingWord[VSI - 1] == KEY_H) {
+                if (VSI - 2 >= 0 && CHR(VSI - 2) == KEY_T && CHR(VSI - 1) == KEY_H) {   //CHR: a capital T or H too (D66)
                     TypingWord[VSI+1] |= TONEW_MASK;
                     if (VSI + 2 < _index && CHR(VSI+2) == KEY_N) {
                         TypingWord[VSI] |= TONEW_MASK;
                     }
-                } else if (VSI - 1 >= 0 && TypingWord[VSI - 1] == KEY_Q) {
+                } else if (VSI - 1 >= 0 && CHR(VSI - 1) == KEY_Q) {
                     TypingWord[VSI+1] |= TONEW_MASK;
                 } else {
                     TypingWord[VSI] |= TONEW_MASK;

@@ -292,3 +292,8 @@ D65	1	]i < 	ưi 	1	same: was "wi", English
 D65	1	^as < 	Ứa 	1	Shift+] (Ư, ^ in the harness): same
 D65	1	b[i < 	bơi 	1	ơ typed with [: unchanged
 D65	1	w[i-tooi 	ươi-tôi 	1	before a hyphen, a word with [ or ] is no English compound (Wi-Fi): was put back to its keys
+D66	1	Thuowr 	Thuở 	1	a capital T: "thuở" keeps the u plain, as in lowercase (was Thưở)
+D66	1	tHuowr 	tHuở 	1	same for a capital H
+D66	1	thuowr 	thuở 	1	lowercase: unchanged
+D66	1	Thuowng 	Thương 	1	an n after it: ươ, as in lowercase (unchanged)
+D66	1	Quowr 	Quở 	1	a capital Q: unchanged
