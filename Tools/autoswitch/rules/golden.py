@@ -132,9 +132,11 @@ for w in vi_words:
 for w in vi_words[:3000]:   #ươ words with oo after (D71), and a letter after a stretch: the Telex undo after all (D72)
     k, t = stretch_keys(w)
     if not k: continue
-    if 'uwow' in k: stretch += [k + t + 'oo', k + 'oo' + t]
     m = re.match(r'^(.*?)(aa|ee|oo)([a-z]+)$', k)   #"xoong", "boong": the doubled letter typed three times, then the rest
     if m: stretch += [m.group(1) + m.group(2) + m.group(2)[0] + m.group(3) + t]
+for w in vi_words:   #every word ending in ươ, with oo after (D71: "ngườooo")
+    k, t = stretch_keys(w)
+    if k and k.endswith('uwow'): stretch += [k + t + 'oo', k + 'oo' + t, k + t + 'ooo']
 en = [l.split()[0] for l in open(os.path.join(AS, 'en_spell_ok.txt'), encoding='utf-8')][:20000]
 for w in en:
     if w.isalpha() and w.islower() and w[-1] in 'aeo': stretch.append(w + w[-1] * 2)
