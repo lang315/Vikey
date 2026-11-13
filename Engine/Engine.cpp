@@ -215,10 +215,10 @@ static int asStretchStart(const int& minRun) {
           key == KEY_G || key == KEY_H || key == KEY_M || key == KEY_N || key == KEY_P || key == KEY_T)) return -1;
     Uint32 shape = last & (TONE_MASK | TONEW_MASK);
     int s = _index - 1;
-    while (s > 0 && CHR(s - 1) == key && !(TypingWord[s - 1] & (STANDALONE_MASK | CHAR_CODE_MASK))) {
+    while (s > 0 && CHR(s - 1) == key && !(TypingWord[s - 1] & CHAR_CODE_MASK)) {
         Uint32 prev = TypingWord[s - 1] & (TONE_MASK | TONEW_MASK);
         bool horn = key == KEY_O && !shape && prev == TONEW_MASK;
-        if (prev != shape && !horn) break;
+        if (!horn && (prev != shape || (TypingWord[s - 1] & STANDALONE_MASK))) break;   //only the ơ may be standalone: typed with [ (D65)
         s--;
         if ((TypingWord[s] & MARK_MASK) || horn) break;   //the toned letter, or the ơ, starts the run
     }
@@ -439,7 +439,8 @@ static bool asResyncStates() {   //false: the keys couldn't be rebuilt for the w
         Uint32 c = TypingWord[x];
         if (c & CHAR_CODE_MASK) return false;              //a character the keys can't rebuild: leave the list alone
         Uint32 caps = c & CAPS_MASK;
-        if ((c & STANDALONE_MASK) && (c & TONEW_MASK)) { KeyStates[n++] = KEY_W | caps; }
+        if ((c & STANDALONE_MASK) && (c & TONEW_MASK))   //ư from w, or ơ / ư from [ ] (D65)
+            KeyStates[n++] = ((c & BRACKET_MASK) ? (CHR(x) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) : KEY_W) | caps;
         else {
             KeyStates[n++] = CHR(x) | caps;
             if (c & TONE_MASK) KeyStates[n++] = CHR(x) | up;     //â ê ô đ: the letter twice
@@ -631,19 +632,19 @@ Uint32 getCharacterCode(const Uint32& data) {
             key |= TONEW_MASK;
         }
         if (_unicodeTable.find(key) == _unicodeTable.end())
-            return data & ~STANDALONE_MASK; //not found (a standalone w that lost its ư is just u, never a raw flagged code)
+            return data & ~(STANDALONE_MASK | BRACKET_MASK); //not found (a standalone w that lost its ư is just u, never a raw flagged code)
         
         return _unicodeTable[key][markElem] | CHAR_CODE_MASK;
     } else { //doesn't has mark
         if (_unicodeTable.find(key) == _unicodeTable.end())
-            return data & ~STANDALONE_MASK; //not found (a standalone w that lost its ư is just u, never a raw flagged code)
+            return data & ~(STANDALONE_MASK | BRACKET_MASK); //not found (a standalone w that lost its ư is just u, never a raw flagged code)
         
         if (data & TONE_MASK) {
             return _unicodeTable[key][capsElem] | CHAR_CODE_MASK;
         } else if (data & TONEW_MASK) {
             return _unicodeTable[key][capsElem + 2] | CHAR_CODE_MASK;
         } else {
-            return data & ~STANDALONE_MASK; //not found (a standalone w that lost its ư is just u, never a raw flagged code)
+            return data & ~(STANDALONE_MASK | BRACKET_MASK); //not found (a standalone w that lost its ư is just u, never a raw flagged code)
         }
     }
     
@@ -939,15 +940,17 @@ void insertD(const Uint16& data, const bool& isCaps) {
 }
 
 static bool _hornBack = false;   //this key brought an ơ back with the o the ô took (D64)
-/** The ô at the end of the word was an ơ until the last o: its keys are o, w, o, with tone keys anywhere ("owfo").
- *  Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D64). */
+/** The ô at the end of the word was an ơ until the last o: its keys are o, w, o or [, o (D65), with tone keys
+ *  anywhere ("owfo", "[fo"). Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D64). */
 static int hornTurnedHat() {
     int x = _stateIndex - 2;
     while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;
     if (x < 1 || (KeyStates[x] & CHAR_MASK) != KEY_O) return -1;
     int o = x--;
     while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;
-    return x >= 0 && (KeyStates[x] & CHAR_MASK) == KEY_W ? o : -1;
+    if (x < 0) return -1;
+    Uint16 k = (Uint16)(KeyStates[x] & CHAR_MASK);
+    return k == KEY_W || k == KEY_LEFT_BRACKET ? o : -1;
 }
 
 void insertAOE(const Uint16& data, const bool& isCaps) {
@@ -1029,7 +1032,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
             hCode = vWillProcess;
             
             if ((CHR(VSI) == KEY_U && CHR(VSI+1) == KEY_O)) {
-                if (VSI - 2 >= 0 && TypingWord[VSI - 2] == KEY_T && TypingWord[VSI - 1] == KEY_H) {
+                if (VSI - 2 >= 0 && CHR(VSI - 2) == KEY_T && CHR(VSI - 1) == KEY_H) {   //CHR: a capital T or H too (D66)
                     TypingWord[VSI+1] |= TONEW_MASK;
                     if (VSI + 2 < _index && CHR(VSI+2) == KEY_N) {
                         TypingWord[VSI] |= TONEW_MASK;
@@ -1115,13 +1118,13 @@ void insertW(const Uint16& data, const bool& isCaps) {
 }
 
 static bool _appendedStandalone = false;   //this key only added ư/ơ at the end: it isn't on screen yet (D52)
-void reverseLastStandaloneChar(const Uint32& keyCode, const bool& isCaps) {
+void reverseLastStandaloneChar(const Uint32& keyCode, const bool& isCaps, const bool& bracket) {
     _appendedStandalone = true;
     hCode = vWillProcess;
     hBPC = 0;
     hNCC = 1;
     hExt = 4;
-    TypingWord[_index - 1] = (keyCode | TONEW_MASK | STANDALONE_MASK | (isCaps ? CAPS_MASK : 0));
+    TypingWord[_index - 1] = (keyCode | TONEW_MASK | STANDALONE_MASK | (isCaps ? CAPS_MASK : 0) | (bracket ? BRACKET_MASK : 0));
     hData[0] = GET(TypingWord[_index - 1]);
 }
 
@@ -1140,14 +1143,14 @@ void checkForStandaloneChar(const Uint16& data, const bool& isCaps, const Uint32
     
     if (_index > 0 && CHR(_index-1) == KEY_U && keyWillReverse == KEY_O) {
         insertKey(keyWillReverse, isCaps);
-        reverseLastStandaloneChar(keyWillReverse, isCaps);
+        reverseLastStandaloneChar(keyWillReverse, isCaps, IS_BRACKET_KEY(data));
         return;
     }
     
     if (_index == 0 && _afterDigit && data == KEY_W) { insertKey(data, isCaps); return; }
     if (_index == 0) { //zero char
         insertKey(data, isCaps, false);
-        reverseLastStandaloneChar(keyWillReverse, isCaps);
+        reverseLastStandaloneChar(keyWillReverse, isCaps, IS_BRACKET_KEY(data));
         return;
     } else if (_index == 1) { //1 char
         for (i = 0; i < _standaloneWbad.size(); i++) {
@@ -1157,13 +1160,13 @@ void checkForStandaloneChar(const Uint16& data, const bool& isCaps, const Uint32
             }
         }
         insertKey(data, isCaps, false);
-        reverseLastStandaloneChar(keyWillReverse, isCaps);
+        reverseLastStandaloneChar(keyWillReverse, isCaps, IS_BRACKET_KEY(data));
         return;
     } else if (_index == 2) {
         for (i = 0; i < _doubleWAllowed.size(); i++) {
             if (CHR(0) == _doubleWAllowed[i][0] && CHR(1) == _doubleWAllowed[i][1]) {
                 insertKey(data, isCaps, false);
-                reverseLastStandaloneChar(keyWillReverse, isCaps);
+                reverseLastStandaloneChar(keyWillReverse, isCaps, IS_BRACKET_KEY(data));
                 return;
             }
         }
@@ -1501,6 +1504,19 @@ static bool asRawWord(const Uint32* keys, const int& count, char* out) {
     }
     out[count] = 0;
     return true;
+}
+
+/** The keys that aren't letters are only [ ] typed as ơ / ư: one for each ơ / ư they made (D65). Such keys are no
+ *  English word. A [ that stayed a bracket ("the[[") or any other key doesn't count. */
+static bool asBracketVowelsOnly(const Uint32* keys, const int& count) {
+    int brackets = 0, made = 0;
+    for (int x = 0; x < count; x++) {
+        if (asLetterOf(keys[x])) continue;
+        if (!IS_BRACKET_KEY((Uint16)(keys[x] & CHAR_MASK))) return false;
+        brackets++;
+    }
+    for (int x = 0; x < _index; x++) if (TypingWord[x] & BRACKET_MASK) made++;
+    return brackets > 0 && brackets == made;
 }
 
 static inline bool asEnabled() {
@@ -1925,10 +1941,15 @@ static bool asStretchedVietnamese() {
     if (!asFewCapitals(keys, n)) return false;
     asInitLetters();
     char raw[AS_KEY_LEN];
-    if (!asRawWord(keys, n, raw) || asEnglishScore(raw) != AS_MISSING) return false;
-    int len = (int)strlen(raw);
-    while (len >= 2 && raw[len - 1] == raw[len - 2]) raw[--len] = 0;
-    int en = asEnglishScore(raw);
+    bool letters = asRawWord(keys, n, raw);
+    if (!letters && !asBracketVowelsOnly(keys, n)) return false;   //"ddw[jcccc" goes on: [ is ơ, no English word (D65)
+    if (letters && asEnglishScore(raw) != AS_MISSING) return false;
+    int en = AS_MISSING;
+    if (letters) {
+        int len = (int)strlen(raw);
+        while (len >= 2 && raw[len - 1] == raw[len - 2]) raw[--len] = 0;
+        en = asEnglishScore(raw);
+    }
     //the syllable before the stretch: spell check it alone and score it, then put the check of the whole word back
     Byte whole = _index;
     bool savedTemp = tempDisableKey;
@@ -1972,6 +1993,8 @@ static bool asHyphenRestore() {
     if (!ok || !transformed) return false;
     //only words starting with w (Telex "ư"): "nơ-ron", "rơ-moóc", "táp-lô" are Vietnamese loanwords
     if (asLetterOf(KeyStates[0]) != 'w') return false;
+    char raw[AS_KEY_LEN];
+    if (!asRawWord(KeyStates, _stateIndex, raw) && asBracketVowelsOnly(KeyStates, _stateIndex)) return false;   //"w[i": no English word (D65)
     int vn = asVietnameseScore(word);
     return vn == AS_MISSING || vn < AS_VN_FLOOR;
 }

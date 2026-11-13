@@ -5,6 +5,40 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 66. "Thuở" with a capital T came out "Thưở"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** "thuowr" gives "thuở": after "th", w on "uo" puts the horn on the o only, unless an n follows ("thương"). With a capital T or H ("Thuowr", "tHuowr") it gave "Thưở". The check compared the whole letter, capital bit included, so a capital T was no T.
+
+**Fix.** The check compares the key only (`CHR`), not the capital bit: "Thuở", "tHuở". Typing every Vietnamese syllable of the Telex lock with a capital first letter now gives the lowercase result capitalised (10966 of 10966; was 1 different). Cases tagged D66 in `rules.tsv`.
+
+**Not covered.**
+- All caps: "OOOCX" gives "OOCX", not "OÕC" (the Telex undo of ô, another path).
+- Tone placement (rules 3.1 and 3.2 in `Engine.cpp`) still compares whole letters, e.g. `TypingWord[VSI] == (KEY_U | TONEW_MASK)`: a capital or standalone ư/ơ doesn't match. No wrong output was found for it (all-caps and capital-first runs of the Telex lock), and those comparisons also leave out toned vowels, so changing them may change lowercase typing.
+
+## 65. Words typed with [ and ] (ơ, ư) work like the same words typed with w
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** In Telex, [ types ơ and ] types ư. Words typed with them went wrong where the same words typed with w did not:
+- A stretched word was put back to its keys: "ddw[jcccc" gave "ddw[jcccc", not "đượcccc"; "m[fiiii", "thw[ngfgggg", "nh]nggggg" the same (D63).
+- o after an ơ typed with [ (D64): "b[ooo" gave "booo", the ơ lost; "b[fooo" gave "b[foo", a key dropped; "m[foooo" and 4 Backspaces gave "m".
+- Backspace back into a word with a ] ư rebuilt its keys with w: "ứa" (]as), space, Backspace, space gave "was" in English. An ơ typed with [ was rebuilt as w too.
+- Before a hyphen, a word starting with w and a [ ("w[i-") was put back to its keys as an English compound (Wi-Fi, D23).
+
+**Fix.** Keys with [ or ] are no English word, as everywhere else in auto switch:
+- The stretch check no longer gives up on keys that aren't all letters; the hyphen check leaves such a word alone.
+- The ô made from an ơ typed with [ turns back into ơ at the next o, as after o, w (D64), and the stretch may start at that ơ.
+- An ơ / ư typed with [ ] is marked in the word (`BRACKET_MASK`), so Backspace back into the word rebuilds [ or ] for it, and w for an ư typed with w. Only [ ] that made an ơ / ư skip the English checks; a [ that stayed a bracket doesn't.
+
+Found by typing all 803 syllables with ơ/ư from the Telex lock both ways (w, and [ ]) in 26 Vietnamese-mode contexts and English mode (punctuation, tones, stretches, Backspace, capitals, words around them) and comparing the results. Cases tagged D65 in `rules.tsv`; the harness types Shift+[ and Shift+] as ~ and ^ ({ } are ← →).
+
+**Not covered.**
+- English mode, decided to keep: [ and ] stay brackets there, so a word typed with them is not changed to Vietnamese ("b[i " stays; "bowi " gives "bơi"). [ is common in code: "t[i]" would become "tơi]".
+- Two copies are still a slip (D10): "ddw[jcc" is put back to its keys, as before. Also when Backspace leaves two: "m[foooo" and 3 Backspaces shows "mờo", and space puts back "m[fo", as "mowfoooo" gives "mowfo" and "thefmmmm" gives "thefmm".
+- Where the w form differs and the [ form is right, nothing changed: all-caps "B~M" is "BƠM" (w: "BOWM", an acronym, D23); "h[i" Backspace is "hơ" (w: "how"); "k]" stays a bracket (k + ư is no syllable, like "kw").
+
 ## 64. Stretching "ờ" with o lost the ơ: "ờooo"
 
 **Status:** Done in the engine, in review (2026-11-12).

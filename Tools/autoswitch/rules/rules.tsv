@@ -273,3 +273,26 @@ D64	1	mowfoooo<<<< 	mờ 	1	Backspace takes the stretched o one by one
 D64	1	owfo 	ồ 	1	one o after ơ still makes ô, as before
 D64	1	tuowoj 	tuộ 	1	same: people fix a w typed by mistake this way
 D64	1	owooc 	owooc 	1	a word that is no syllable is put back to all its keys (none dropped)
+D65	1	ddw[jcccc 	đượcccc 	1	ơ typed with [ in a stretched word: it stays Vietnamese (was put back to its keys)
+D65	1	ruwas khi moo rur em ddi daauj xong em caafm ddi cho anh cuxm ddw[jcccc 	rứa khi mô rủ em đi dậu xong em cầm đi cho anh cũm đượcccc 	1	same, as reported
+D65	1	m[fiiii 	mờiiii 	1	same
+D65	1	thw[ngfgggg 	thườnggggg 	1	same
+D65	1	nh]nggggg 	nhưnggggg 	1	ư typed with ]
+D65	1	ddw[jcccc, tooi	đượcccc, tôi	1	at a comma too
+D65	1	b[fooo 	bờooo 	1	o after an ơ typed with [ stretches it, as after ow (D64): was b[foo, a key dropped
+D65	1	[fooo 	ờooo 	1	same at the start of a word
+D65	1	b[ooo 	bơooo 	1	same without a tone: was booo, the ơ lost
+D65	1	th[ooof 	thờooo 	1	a tone typed after the stretch (D63) goes on the ơ
+D65	1	m[foooo<<<< 	mờ 	1	Backspace takes the stretched o one by one: was m, the ơ deleted too
+D65	1	~fooo 	Ờooo 	1	Shift+[ (Ơ, ~ in the harness): same
+D65	1	[fo 	ồ 	1	one o after ơ still makes ô, as before
+D65	1	k[ooo 	k[ooo 	1	a [ that stayed a bracket (k + ơ is no syllable) is no ơ: unchanged
+D65	1	]as < 	ứa 	1	Backspace back into "ứa" typed with ]: its keys were rebuilt as w-a-s, an English word (was "was", English)
+D65	1	]i < 	ưi 	1	same: was "wi", English
+D65	1	^as < 	Ứa 	1	Shift+] (Ư, ^ in the harness): same
+D65	1	b[i < 	bơi 	1	ơ typed with [: unchanged
+D65	1	w[i-tooi 	ươi-tôi 	1	before a hyphen, a word with [ or ] is no English compound (Wi-Fi): was put back to its keys
+D66	1	Thuowr 	Thuở 	1	a capital T: "thuở" keeps the u plain, as in lowercase (was Thưở)
+D66	1	tHuowr 	tHuở 	1	same for a capital H
+D66	1	thuowr 	thuở 	1	lowercase: unchanged
+D66	1	Thuowng 	Thương 	1	an n after it: ươ, as in lowercase (unchanged)

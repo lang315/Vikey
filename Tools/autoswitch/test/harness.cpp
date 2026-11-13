@@ -25,7 +25,7 @@ static Uint16 keyOf(char c) {
         case 'u': return KEY_U; case 'v': return KEY_V; case 'w': return KEY_W; case 'x': return KEY_X; case 'y': return KEY_Y;
         case 'z': return KEY_Z; case ' ': return KEY_SPACE; case ',': return KEY_COMMA; case '.': return KEY_DOT;
         case '\n': return KEY_RETURN; case '<': return KEY_DELETE; case '_': return KEY_MINUS; case '-': return KEY_MINUS; case '/': return KEY_SLASH; case '1': return KEY_1; case '2': return KEY_2;
-        case '\'': return KEY_QUOTE; case '"': return KEY_QUOTE; case ')': return KEY_0; case '(': return KEY_9; case '[': return KEY_LEFT_BRACKET; case ']': return KEY_RIGHT_BRACKET; case ';': return KEY_SEMICOLON; case '?': return KEY_SLASH;
+        case '\'': return KEY_QUOTE; case '"': return KEY_QUOTE; case ')': return KEY_0; case '(': return KEY_9; case '[': return KEY_LEFT_BRACKET; case ']': return KEY_RIGHT_BRACKET; case '~': return KEY_LEFT_BRACKET; case '^': return KEY_RIGHT_BRACKET; case ';': return KEY_SEMICOLON; case '?': return KEY_SLASH;
     }
     return 0xFFFF;
 }
@@ -66,7 +66,7 @@ static void press(char c) {
         vLanguage = vLanguage ? 0 : 1; startNewSession(); vAutoSwitchForget(); prevN = 0; enCount = 0; enValid = true; enAfterDouble = false;
         return;
     }
-    bool shifted = c == '"' || c == ')' || c == '(' || c == '?';
+    bool shifted = c == '"' || c == ')' || c == '(' || c == '?' || c == '~' || c == '^';   // ~ ^ = Shift+[ ] (Ơ Ư in Telex): { } are ← →
     bool caps = (c >= 'A' && c <= 'Z') || shifted;
     char lc = (c >= 'A' && c <= 'Z') ? c + 32 : c;
     Uint16 key = keyOf(lc);
