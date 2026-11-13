@@ -20,14 +20,16 @@ After the switch the next word shows as its keys until its space ("lats", then "
 | Why it switched | Before | Now |
 |---|---|---|
 | Unknown word, tone mark only | 4.1% | 0.2% |
-| Unknown word with â ê ô ă ơ ư đ | 2.4% | 1.0% |
+| Unknown word with â ê ô ă ơ ư đ | 2.4% | 1.1% |
 | Doubled tone key (D5.1), not changed | 4.8% | 4.8% |
 | The typo is an English word ("how" for "hơn"), right | 0.9% | 0.9% |
-| All | 12.2% | 6.9% |
+| All | 12.2% | 7.0% |
 
 **Fix.** Such a word is no longer an unknown foreign word when all of these hold. Restore-if-wrong-spelling (D10) handles it as it handles "khoongg": it goes back to its keys and the language stays.
 - Its keys are one syllable, counted past the Telex keys typed inside it and with the keys Telex undid on the way ("Asana" is three syllables).
-- It starts with a lowercase letter, or it is a capitalised slip: its vowels are a Vietnamese vowel group (gi- and qu- included) and one character dropped, two swapped or a neighbouring key on the shown word gives a Vietnamese word ("Bajnn" shows "Bạnn", "Bạn" is a word). Other capitalised words are names and switch as before: "Huawei has a bug", "Casio tax", "Airbnb" (a review of the first version gave "Huawei há", "Casio tã"). Measured on 369 capitalised slips and 1,394 names (`/usr/share/dict/propernames` and brands): 72% of the slips stay Vietnamese, 3 names newly do (Miro, Toft, Vuex; their text is unchanged).
+- Telex undid no key on the way. Restore-if-wrong-spelling would put the word back without it ("caraja has" gave "caraj há", "refeed" gave "refed"), so such a word is put back with every key and switches, as before D68. "cuooocf", "moooft" keep their text and switch again.
+- It starts with a lowercase letter, or it is a capitalised slip: its vowels are a Vietnamese vowel group (gi- and qu- included), one edit on the shown word gives a Vietnamese word (a doubled letter dropped, two letters swapped, or a neighbouring key: "Bajnn" shows "Bạnn", "Bạn" is a word), and restore-if-wrong-spelling is on (else the word would stay as Telex made it). Other capitalised words are names and switch as before: "Huawei has a bug", "Casio tax", "Airbnb", "Lyft has a bug", "Deezer tax". Dropping any letter, not only a doubled one, also matched short names ("Lyft" -> "Lỳ", "Lyft has" gave "Lyft há"), and was taken out after review.
+- Measured (scratch scripts) on 369 capitalised slips: 58% stay Vietnamese (0% before). Of 219 brands followed by "tax", 2 now give "tã": Ajv, and Miro (two keys swapped give "mỏi"). Of 211,758 capitalised dictionary words (`/usr/share/dict/propernames`, `web2`), 112 newly stay Vietnamese, mostly obscure (Arist, Baft, Chiro); an English word after them that reads Vietnamese comes out Vietnamese ("Miro tax" gives "Miro tã").
 - The word before doesn't read English at least ~30x more often than Vietnamese (the "thí makes" margin): "This Airbnb" and "makes tiengs" switch as before. After a tie read as Vietnamese the slip stays Vietnamese: "car bajnn" gives "cả bajnn" (it switched before).
 - It is no English word with its last letter stretched ("testtt", D63).
 
@@ -37,13 +39,14 @@ Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. With re
 - Goldens: chat with typos, one line changed: the typo "ddpori" now shows "đpori", the text the corpus meant. Chat and synthetic unchanged.
 - Metrics: chat with typos 70 → 67 manual switches, 7 → 6 wrong words. Chat and synthetic unchanged.
 - Realistic typing, back-into-word slips fixed by hand: 425 → 424.
-- Telex lock: 12 syllables typed with one key too many ("cuooocf", "dduwuwcj") keep their text and now stay Vietnamese.
+- Telex lock: 9 syllables typed with one key too many ("dduwuwcj", "nuwuwax") keep their text and now stay Vietnamese. 3 where Telex undid the key ("cuooocf") switch as before.
 - Rules: "oxy" (D53) and "hoyyyyyf" (D63) keep their text and now stay Vietnamese.
 
 **Not covered.**
 - A doubled tone key ("coss", "maff") still switches to English in the middle of the word (D5.1, D19). It is now the largest part left.
 - A typo that reads as two syllables: "toota" (tốt), "enen" (nên).
-- A capitalised slip no single edit away from a word, or with an odd vowel group, still switches (28% of those measured). The next word, if clearly Vietnamese, switches back.
+- A capitalised slip no single edit away from a word, or with an odd vowel group, still switches (42% of those measured). The next word, if clearly Vietnamese, switches back.
+- A slip in a word Telex undid a key of ("thaaasy") switches, as before D68.
 - The typo itself still shows as its keys ("tiengs"), as before (D10).
 - Backspace twice right after such a typo no longer brings the marked word back ("bạnn"): nothing switched, so there is nothing to undo. Backspace goes back into the word as typed, as in "khoongg" (D10). `driver/undo_test` has both cases.
 
