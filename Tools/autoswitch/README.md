@@ -39,4 +39,4 @@ EXTRA="-DAS_VN_FLOOR=30" Tools/autoswitch/check.sh   # try a tweak without editi
 ```
 
 - `rules/rules.tsv`: every decided rule with tagged cases (see DECISIONS.md).
-- `rules/golden/`: snapshots of typing the chat corpus (with and without typos), every syllable in Vietnamese mode, and the metrics.
+- `rules/golden/`: snapshots of typing the chat corpus (with and without typos), every syllable in Vietnamese mode, stretched words (`stretch.tsv`: a / e / o endings, every ưa word, Backspace into them, English words; the Driver types them too), and the metrics.

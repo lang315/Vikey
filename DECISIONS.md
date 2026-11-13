@@ -5,6 +5,96 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 72. A stretch of a / e / o shows every key: "chưaaa", "củaaa", "nhéee"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** The user's report again: "chữa" with four a keys should show four a. The third a, e or o in a row is the Telex undo of ^: "aa" is "â", "aaa" is "aa". So a stretch showed one letter fewer than its keys: "chuwaaa" gave "chưaa", "cuaaa" gave "cuaa", "aaa" gave "aa". Only "ờ" (D64) kept every key ("ờoo"). The user chose every key for every a, e, o stretch.
+
+**Fix.** Engine only (`insertAOE`, `dropKeptCopy`), so every platform gets it. Cases tagged D72 in `rules.tsv`.
+- The key that undoes a ^ at the end of the word keeps the letter the ^ took, when it is the third of that letter typed in a row with at most one tone key among them (D71): "chưaaa", "cuaaa", "nhéee", "quáaa", "aaa". Every key is a letter, so none is dropped, and the stretch (D63) needs no special count. D70's two-copy rule stays only for Backspace (below).
+- The tone goes back on the syllable (`checkGrammar`), as before: "chữaaa", "củaaa". When it stays where it is, the output of the undo is kept: `insertMark` rewrites it, counting the kept letter that isn't on screen yet.
+- Two tones among the keys are typed apart, no stretch: "caraja has" switches as before (D68).
+- A tone key after three copies of a / e / o goes on the syllable (D63) unless the keys with the run cut to two end an English word more common than the syllable with that tone, decided as for any word that is both: "pooor" (poor, no "pỏ"), "cheeers", "careeer" keep every key; "beeer" is "bẻee" ("bẻ"), "baaas" "báaa". The syllable's score comes from a scratch replay; a tone key pressed twice in it ("carer") must not switch the language, so the auto switch request and the doubled-key memory are kept around it. Found in review: from three copies on, a tone key in English words became a tone ("cheeers" gave "chéee", "careeer" gave "caeeer").
+- A letter after the stretch (not a tone key, not the same letter) means it was the Telex undo after all, as in "xoong", "boong", "oóc": the kept letter goes, the undo key is dropped as before, a tone on it goes back on the syllable, and the whole word is sent again. "xooong" is "xoong", "xooofng" is "xoòng", "ooocx" is "oõc", as before.
+- Backspace in a stretch leaves two copies ("chưaaa" ⌫ is "chưaa"): still a stretch at the end of the word, not a slip (D10), when their keys are in a row (one tone key may come among them) and Telex dropped no key. Typed, two copies give a ^ ("chuâ"), and "caraja" ("cạa", a key dropped) stays a slip.
+
+**Result.**
+- Rules: 36 cases of D18, D62, D63, D69, D70, D71 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
+- Telex lock: 9 lines, all a word that is only the stretch: "aaa" "aaa" (was "aa"), "haaa", "ooo". The "oo" syllables ("xoong", "oõc") and "cuooocf", "moooft" are unchanged.
+- Synthetic: "cả AAA game" is now "AAA" (was "AA"): manual switches 110 → 109. Chat with typos: the three slips of D70 show one letter more ("hẹee"). Chat, metrics otherwise: unchanged.
+- Measured (scratch script, against D68): the 3000 most common Vietnamese words ending in a, e or o with two extra copies stay Vietnamese and start with the word 272 → 463 of 620 (tone before or after), 80 → 269 of 363 (tone among). 3764 English words ending in a, e or o with two extra copies in Vietnamese mode: 179 changed. 155 now show as typed ("theee", "tooo", was "thee", "too"; 9 of them now switch to English, "howeee"), 18 show one letter more as before, 2 show as typed but stay Vietnamese ("weee"), 4 names read Vietnamese (D71).
+- The Driver gives the same text as the simulator on all of them (6065 lines, scratch units).
+- Stretch lock (`rules/golden/stretch.tsv`, in `check.sh`): these words, every ưa word with 1 to 4 extra a and Backspace into them, 6993 cases. The Driver types them too ("driver == simulator on stretches"). The D68 engine changes 2842 of them.
+- `test/bulk.py`: English words typed in Vietnamese mode still wrong after space 319 → 317 of 20000; the rest unchanged.
+
+**Not covered.**
+- Typing "aa" on its own in Vietnamese mode now takes Backspace: "aaa" is "aaa". Telex with auto switch off changes too ("cuaaar" is "củaaa").
+- A vowel pair typed three times in an English word reads Vietnamese when the syllable is a common word: of 800 such words (aa / ee / oo in the 20,000 most common English words, scratch script), 12 come out worse than on main: "beeer" "bẻee", "beees" "béee", "veeer" "vẻee", "queeer" "quẻee", "rooofs" "róoo", and "cheeese" "chéeee", "geeese" (at the s, "chees" is no English word yet). The rest are as on main or show every key ("pooor").
+- "nhesees " (the tone key pressed twice after the stretch) is put back to its keys without the first press and switches, as "goyyyyyff" (D19, D63): "nheees". On main it was "nhesees" only because Telex had dropped an e.
+- The same screen can come from different keys: "xooong " is "xoong", "xooo⌫ong " is "xooong" (the letters show as typed).
+- More junk words switch to English ("cuaaasn " is "cuaasn"; on main it stayed Vietnamese with the same text). "aa" in a longer word ("xoong") is unchanged.
+- The ^ still shows for a moment at the second key ("chuâ", "cuẩ"): Telex "aa" is "â" (D71).
+- "ơ" + oo keeps its own rule (D64).
+
+## 71. The Telex undo of ^ gave back only part of what the ^ took: "nguờoo", "xưân", "nhesee"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** Left open by D69 and D70.
+- A ^ takes the hook off every vowel of the word ("ưa" + a is "uâ", "ươ" + o is "uô"). The key that undoes the ^ gave back the ơ (D64) and, since D69, an ư guessed from a w typed anywhere in the word. "ươ" + oo with a tone lost the ư: "nguwowfooo" gave "nguờooo".
+- The ^ sent again only its own letter, not the vowel it took the hook off. The screen kept the ư the word no longer had: "xuwaan " (a w typed by mistake in "xuân") showed "xưân", "tuwaan " showed "tưân", "muwaa" showed "mưâ". With a tone it was right ("chuwaanr" gives "chuẩn"), because the tone sends the whole vowel group again.
+- A stretch with the tone typed among its three keys was a slip (D70 wanted them in a row): "nhesee " ("nhé" + ee), "nheese ", "hasaa ", "quasaa " were put back to their keys and switched to English, "nefee " gave "nefe" (a key lost).
+
+**Fix.** Engine only (`insertAOE`, `asStretchStart`), so every platform gets it. Cases tagged D71 in `rules.tsv`.
+- The ^ remembers the vowels it took a hook off. The key that undoes it right after (tone keys between allowed) gives every one of them back: "ngườooo", "chữaa". This replaces the D69 guess. The memory is cleared at a new word and kept across the scratch replays auto switch runs.
+- The ^ sends those vowels again with its letter: "xuân", "tuân", "muâ" (as "muẫ" with a tone). The undo sends the hooks it gives back too, also on a vowel after the ^ letter ("a]aa" is "aưa"; found in review, it showed "aua" while the word held "aưa"). The screen used to keep the ư there ("chưâ"); now it shows the word as it is ("chuâ"), as it always did with a tone.
+- Backspace right after that ^ gives the hooks back too: an a too many in "chưa" ("chuâ"), ⌫, a gives "chưa" (was "chua" with a tone; without one the screen kept the ư only because it was out of step with the word).
+- One tone key may come among the three keys of a D70 stretch: "nhée", "nèe", "háa", "quáa" ("nhéee" since D72). Two are typed apart: "caraja has" switches as before (D68).
+
+**Result.**
+- Goldens, metrics, realistic typing, Backspace undo (`driver/undo_test`), the bulk word lists (`test/bulk.py`): unchanged.
+- Measured (scratch script, D69 to D71 together against D68): the 3000 most common Vietnamese words ending in a, e or o, typed with two extra copies. Staying Vietnamese and starting with the word: tone before or after the copies 272 → 462 of 620, tone among them 80 → 269 of 363. None got worse. ("thể" + e is no stretch: e after ê is the Telex undo.)
+- 3764 English words ending in a, e or o, typed in Vietnamese mode with two extra copies: 14 changed. 8 now stay English or keep their letters ("howeee", "oweee", were "hơee", "ơee"). 4 stretched names now read Vietnamese ("miraaa" "mỉaa", "iraaa", "nerooo", "tarooo"), as "cara" stretched does since D63.
+- The Driver gives the same text as the simulator on all of them (6065 lines, scratch units).
+
+**Not covered.**
+- "ưa" + a is still "uâ" and "a" + a is "â" while typing a stretch: "chữa" shows "chuẫ" before "chữaa", as "của" shows "cuẩ" before "củaa" and "ờ" shows "ồ" before "ờoo" (D64). That is the Telex double key; leaving it out would break "aa" = "â" and the fix of a w typed by mistake ("chuwaanr" is "chuẩn").
+
+## 70. Two copies of a / e / o after the Telex undo are a stretch: "chưaa", "củaa"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** Found while fixing D69. Two copies at the end of a word are a slip (D10, D63): "khoongg" is put back to its keys. For a, e and o two copies on screen take three keys, the second one making the ^ and the third undoing it, so they are no slip. Still "chuwxaaa " was put back to its keys and switched to English (two switches with the words after it), "cuaaar " gave "cuaar", "chuwaaax " gave "chưaax" (the tone key left as a letter). "chuwaaa " gave "chưaa " only because the word held "chuaa" (D69). The user chose to read them as a stretch.
+
+**Fix.** (Replaced by D72: a stretch now shows every key, so it has three copies.) At the end of a word and for a tone typed after the stretch, two copies of a, e or o count as a stretch (`asStretchStart`, three copies before) when the keys typed were that letter three times in a row, the Telex undo among them, then only tone keys: "chữaa", "củaa", "chưaa", "báa". Two copies typed apart stay a slip: "caraja has" switches as before (D68). The rest of D63 applies: the syllable before the stretch must pass spell check, and English keys decide as before. Cases tagged D70 in `rules.tsv`.
+
+**Result.**
+- Measured (scratch script) on the 94 lowercase ưa words of `vi_50k.txt` with 2 extra a keys, the tone key at the end or before the a's: 139 cases changed, all real words now keep the ư and stay Vietnamese ("chữaa"); the 4 that switched are corpus junk ("nữưa").
+- Goldens: chat with typos, 3 lines changed. The typos "heeej", "theeer", "cuooos" (a key typed twice by mistake in "hệ", "thể", "cuố") now read as a stretch: "hẹe", "thẻe", "cuóo". Before they were put back to their keys without the key Telex undid ("heej", "theer", "cuoos"). Both are wrong; wrong words and manual switches unchanged.
+- Chat, synthetic, Telex lock, metrics, realistic typing: unchanged. The Driver gives the same text as the simulator on the measured cases.
+
+**Not covered.**
+- A tone typed among the three keys ("nhesee ", "nhé" + ee) is a slip as before: the keys are not in a row. Done in D71.
+- A key typed twice by mistake in a word ending in a, e, o can't be told apart from a stretch ("heeej" for "hệ").
+
+## 69. Stretching "chữa" with a lost the ư: "chũaaa"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** A user's report: "Căn bệnh khó chữaaaa" came out "Căn bệnh khó chũaaa". A stretched ưa lost its hook: "chữa" + a gave "chuẫ" (ưa + a is uâ, as in "quân", and the ^ took the hook off the ư), and the next a, the Telex undo of ^, gave "chũaa". Every ưa word had it: "nữa", "giữa", "vừa", "mưa" + a tone after the stretch. Without a tone it was hidden: only the â was sent again, so the screen still showed "mưâ", "mưaa" while the word held "muâ", "muaa".
+
+**Fix.** When the a that undoes the ^ follows a plain u (not qu) and a w or ] was typed in the word, the u gets its hook back (D71 replaced this guess: the ^ remembers the hooks it took) and is sent again with the a: "chữaa", "chữaaa", "mừaaa". The undo still takes one a, as in "quáaa" and "củaaa" (D63); since D72 it doesn't ("chữaaaa"). Engine only (`insertAOE`), so every platform gets it. Cases tagged D69 in `rules.tsv`.
+
+**Result.**
+- Goldens, metrics, realistic typing: unchanged (no corpus line stretches an ưa).
+- Measured (scratch script) on the 94 lowercase ưa words of `vi_50k.txt`, typed with 1 to 4 extra a keys, the tone key at the end or before the a's (676 cases): with 3+ extra a keys, 276 cases changed, all now keep the ư and stay Vietnamese ("chữaaa"); the 26 that don't are corpus junk ("nữưa", "ðưa"). The Driver gives the same text as the simulator on all of them.
+- With 2 extra a keys the word now held "chưaa", a slip (D10), so it was put back to its keys and switched, as "chuwxaaa " always was. D70 makes these a stretch.
+
+**Not covered.**
+- Between the second and third a the word shows "chuẫ" (ưa + a is uâ); the third a fixes it. Without a tone the screen shows "mưâ" there while the word holds "muâ", as before. The mismatch is fixed in D71; the "chuẫ" stays (Telex double key).
+- ươ + oo ("ươ" + o is uô): not seen in chat. Done in D71.
+
 ## 68. A typo in a Vietnamese word switched to English: "bajnn", "viejt", "thaasyy"
 
 **Status:** Done in the engine, in review (2026-11-13).

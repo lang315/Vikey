@@ -6,6 +6,7 @@
 2. Telex lock: every Vietnamese syllable typed in Vietnamese mode in 3 tone orders must keep
    producing the same text and language.
 3. Metrics: manual switches per 100 words (ideal user) must not get worse.
+4. Stretch lock: words stretched in chat (D63, D69 to D72) must keep producing the same text and language.
 """
 import json, os, re, subprocess, sys, unicodedata
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -95,6 +96,58 @@ cases = sorted(counts)
 res = subprocess.run([HARNESS, 'lines'], input=''.join(f'1\t{k} \n' for k in cases), capture_output=True, text=True, check=True).stdout.rstrip('\n').split('\n')
 lines = [f'{k}\t{r}' for k, r in zip(cases, res)]
 compare('telex_vn_mode.tsv', lines, lambda o, n: print(f'  {o.split(chr(9))[0]}: before {o.split(chr(9))[1:]!r} now {n.split(chr(9))[1:]!r}'))
+
+# 4. Stretch lock (D63, D69 to D72): words stretched in chat, typed with extra copies of their last a / e / o.
+#    The common Vietnamese words with the tone key before, among and after the copies; every ưa word with 1 to 4 extra
+#    a keys and Backspace into them; English words ending in a / e / o in Vietnamese mode. The words are typed
+#    again for the Driver (check.sh: driver == simulator on stretches).
+def stretch_keys(word):
+    keys, tone = '', ''
+    for ch in unicodedata.normalize('NFC', word):
+        d = unicodedata.normalize('NFD', ch); base = d[0]
+        if base == 'đ': keys += 'dd'; continue
+        keys += base
+        for m in d[1:]:
+            if m in TONES: tone = TONES[m]
+            elif m == '̂': keys += base
+            elif m in '̛̆': keys += 'w'
+            else: return None, None
+    return (keys, tone) if keys.isascii() else (None, None)
+def last_base(word): return unicodedata.normalize('NFD', word[-1])[0]
+vi_words = [l.split()[0] for l in open(os.path.join(AS, 'vi_50k.txt'), encoding='utf-8')]
+vi_words = [w for w in vi_words if w.isalpha() and w.islower()]
+stretch = []
+for w in vi_words[:3000]:
+    k, t = stretch_keys(w)
+    if not k or last_base(w) not in 'aeo': continue
+    L = last_base(w)
+    for n in (2, 3):
+        stretch += [k + t + L * n, k + L * n + t] + ([k + L + t + L * (n - 1)] if t else [])
+for w in vi_words:
+    k, t = stretch_keys(w)
+    if not k or not re.sub('[\u0301\u0300\u0309\u0303\u0323]', '', unicodedata.normalize('NFD', w)).endswith('u\u031ba'): continue   #every ưa word
+    for n in range(1, 5): stretch += [k + 'a' * n + t] + ([k[:-1] + t + 'a' * (n + 1)] if t else [])
+    stretch += [k + t + 'aaa<', k + t + 'aa<a', k + t + 'aaa<<<a']
+    stretch += [k[0].upper() + k[1:] + 'aaa' + t, k.replace('uw', ']') + 'aaa' + t]   #a capital, ư typed with ] (D65)
+for w in vi_words[:3000]:   #ươ words with oo after (D71), and a letter after a stretch: the Telex undo after all (D72)
+    k, t = stretch_keys(w)
+    if not k: continue
+    m = re.match(r'^(.*?)(aa|ee|oo)([a-z]+)$', k)   #"xoong", "boong": the doubled letter typed three times, then the rest
+    if m: stretch += [m.group(1) + m.group(2) + m.group(2)[0] + m.group(3) + t]
+for w in vi_words:   #every word ending in ươ, with oo after (D71: "ngườooo")
+    k, t = stretch_keys(w)
+    if k and k.endswith('uwow'): stretch += [k + t + 'oo', k + 'oo' + t, k + t + 'ooo']
+en = [l.split()[0] for l in open(os.path.join(AS, 'en_spell_ok.txt'), encoding='utf-8')][:20000]
+for w in en:
+    if w.isalpha() and w.islower() and w[-1] in 'aeo': stretch.append(w + w[-1] * 2)
+    m = re.match(r'^(.*?)(aa|ee|oo)(.*)$', w)   #a key typed once too often in English: "beeer", "cheeers" (review of D72)
+    if m and w.isalpha() and w.islower(): stretch.append(m.group(1) + m.group(2) + m.group(2)[0] + m.group(3))
+stretch = sorted(set(stretch))
+res = subprocess.run([HARNESS, 'lines'], input=''.join(f'1\t{k} \n' for k in stretch), capture_output=True, text=True, check=True).stdout.rstrip('\n').split('\n')
+compare('stretch.tsv', [f'{k}\t{r}' for k, r in zip(stretch, res)], lambda o, n: print(f'  {o.split(chr(9))[0]}: before {o.split(chr(9))[1:]!r} now {n.split(chr(9))[1:]!r}'))
+with open(os.path.join(TMP, 'golden_stretch.units'), 'w', encoding='utf-8') as f:   #the Driver has no Backspace in units
+    for k in stretch:
+        if '<' not in k: f.write(f'W\t{k}\t1\nS\t \nW\ttooi\t1\nN\n')
 
 # 3. metrics
 metrics = {}
