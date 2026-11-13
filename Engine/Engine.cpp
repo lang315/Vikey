@@ -94,6 +94,7 @@ static int _hatPos = -1, _hatState = 0, _hatHornN = 0;
 //the copy a stretch kept (D72): where it is in the word, the key it came with in KeyStates, the word's length then
 static int _keptAt = -1, _keptKey = 0, _keptIndex = 0;
 static int dropKeptCopy(const Uint16& data);
+static bool asStretchToneEnglish();
 static Byte _hatHorn[3];
 /** The keys as typed: the key states with the dropped keys put back. Returns how many. */
 static int asStatesWithDrops(Uint32* full, const int& maxN);
@@ -998,7 +999,7 @@ static bool hatJustMade() {
 void insertAOE(const Uint16& data, const bool& isCaps) {
     findAndCalculateVowel();
     int hornO = -1, hornLo = MAX_BUFF, keep = -1;
-    Byte took[3]; int tookN = 0;
+    Byte took[3] = {0, 0, 0}; int tookN = 0;
 
     //remove W tone
     for (ii = VSI; ii <= VEI; ii++) {
@@ -1025,7 +1026,11 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 //"chữa" + aa, "hươ" + oo are stretched: the undo gives back the hooks the ^ took off the other vowels (D69, D71)
                 if (ii == _hatPos && hatJustMade())
                     for (int h = 0; h < _hatHornN; h++)
-                        if (_hatHorn[h] != ii) { TypingWord[_hatHorn[h]] |= TONEW_MASK; if (_hatHorn[h] < hornLo) hornLo = _hatHorn[h]; }
+                        if (_hatHorn[h] != ii) {
+                            TypingWord[_hatHorn[h]] |= TONEW_MASK;
+                            if (_hatHorn[h] < ii) hornLo = min(hornLo, (int)_hatHorn[h]);
+                            else hData[_index - 1 - _hatHorn[h]] = GET(TypingWord[_hatHorn[h]]);   //after the ^ letter: on screen already, sent again ("a]aa")
+                        }
                 _hatPos = -1;
                 hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D62)
                 //_index = 0;
@@ -1048,7 +1053,7 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
     }
     for (int p = ii - 1; p >= hornLo; p--) hData[hBPC++] = GET(TypingWord[p]);   //the hooks on screen too (D69)
     hNCC = hBPC;
-    if (hornO >= 0 || keep >= 0) {   //the o the ô took, after the ơ (this o is added by the caller, vRestore)
+    if (hornO >= 0 || keep >= 0) {   //the o the ô took after the ơ (D64), or the letter the ^ took (D72); this key is added by the caller, vRestore
         if (hornO >= 0) _hornBack = true; else _keepBoth = true;
         setKeyData(_index, hornO >= 0 ? KEY_O : data, KeyStates[hornO >= 0 ? hornO : keep] & CAPS_MASK);
         memmove(hData + 1, hData, hNCC * sizeof(hData[0]));
@@ -1295,6 +1300,7 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
         //a tone after a stretched ending ("goyyyyyf", D63): the letters before the run are matched, not the run
         Byte whole = _index;
         int stretch = asStretchStart(3);   //two are a slip, as at the end of the word (D10)
+        if (stretch >= 0 && asStretchToneEnglish()) stretch = -1;   //"beeer" is "beer" (D72)
         if (stretch >= 0) _index = (Byte)(stretch + 1);
         for (auto& vowelEntry : _vowelForMark) {
             vector<vector<Uint16>>& charset = vowelEntry.second;
@@ -2105,7 +2111,7 @@ static bool asStretchedVietnamese() {
  *  letter. The syllable before the run decides instead, as if the tone came before it; insertMark leaves the run out. */
 static bool asStretchTakesTone() {
     int s = asStretchStart(3);   //as in handleMainKey
-    if (s < 0) return false;
+    if (s < 0 || asStretchToneEnglish()) return false;
     Byte whole = _index;
     bool savedTemp = tempDisableKey;   //also set by a Telex undo, not only by spell check
     _index = (Byte)(s + 1);
@@ -2896,6 +2902,35 @@ bool vAutoSwitchIsVietnameseSpelling(const char* letters) {
     bool valid = !tempDisableKey && !savedTemp;
     asRestoreState(saved);
     return valid;
+}
+
+/** The tone key just typed ends an English word once a stretch of a / e / o before it is cut back to two, and that word
+ *  is more common than the syllable with the tone: "pooor" is "poor" (no "pỏ"), "cheeers" "cheers", "careeer" "career".
+ *  Every key of the stretch shows (D72), so the third copy is no Telex undo any more. Decided as for any word that is
+ *  both (D63): "beeer" stays "bẻee", "beeees" "béeee". */
+static bool asStretchToneEnglish() {
+    Uint32 full[MAX_BUFF];
+    int n = asStatesWithDrops(full, MAX_BUFF - 1), x = n - 2, end;
+    if (n < 4 || !IS_MARK_KEY((Uint16)(full[n - 1] & CHAR_MASK))) return false;
+    Uint16 key = (Uint16)(full[x] & CHAR_MASK);
+    if (key != KEY_A && key != KEY_E && key != KEY_O) return false;
+    for (end = x; x >= 0 && (Uint16)(full[x] & CHAR_MASK) == key; x--) {}
+    if (end - x < 3) return false;
+    full[x + 3] = full[n - 1];   //two copies, then the tone key
+    char raw[AS_KEY_LEN];
+    asInitLetters();
+    if (!asRawWord(full, x + 4, raw)) return false;
+    int en = asEnglishScore(raw);
+    if (en == AS_MISSING) return false;
+    full[x + 2] = full[x + 3];   //the syllable with its tone: one copy, then the tone key ("ber" is "bẻ")
+    Uint32 result[MAX_BUFF], doubleKeys[MAX_BUFF];
+    int rc, request = vAutoSwitchRequest, doubleCount = _asDoubleCount, doubleFirst = _asDoubleFirst;
+    bool doubleBoth = _asDoubleBoth;
+    memcpy(doubleKeys, _asDoubleKeys, sizeof(doubleKeys));
+    int vn = asReplay(full, x + 3, result, rc);   //mid-key: a tone key pressed twice in the replay ("carer") must not switch
+    vAutoSwitchRequest = request; _asDoubleCount = doubleCount; _asDoubleFirst = doubleFirst; _asDoubleBoth = doubleBoth;
+    memcpy(_asDoubleKeys, doubleKeys, sizeof(doubleKeys));
+    return vn == AS_MISSING || (vn < AS_VN_FLOOR && en - vn >= AS_PREFER) || en - vn >= AS_VN_EXTREME;
 }
 
 /** Early Switch (D28): which language a finished word can only be. 1 = only Vietnamese (a Vietnamese reading,

@@ -128,8 +128,18 @@ for w in vi_words:
     if not k or not re.sub('[\u0301\u0300\u0309\u0303\u0323]', '', unicodedata.normalize('NFD', w)).endswith('u\u031ba'): continue   #every ưa word
     for n in range(1, 5): stretch += [k + 'a' * n + t] + ([k[:-1] + t + 'a' * (n + 1)] if t else [])
     stretch += [k + t + 'aaa<', k + t + 'aa<a', k + t + 'aaa<<<a']
-for w in [l.split()[0] for l in open(os.path.join(AS, 'en_spell_ok.txt'), encoding='utf-8')][:20000]:
+    stretch += [k[0].upper() + k[1:] + 'aaa' + t, k.replace('uw', ']') + 'aaa' + t]   #a capital, ư typed with ] (D65)
+for w in vi_words[:3000]:   #ươ words with oo after (D71), and a letter after a stretch: the Telex undo after all (D72)
+    k, t = stretch_keys(w)
+    if not k: continue
+    if 'uwow' in k: stretch += [k + t + 'oo', k + 'oo' + t]
+    m = re.match(r'^(.*?)(aa|ee|oo)([a-z]+)$', k)   #"xoong", "boong": the doubled letter typed three times, then the rest
+    if m: stretch += [m.group(1) + m.group(2) + m.group(2)[0] + m.group(3) + t]
+en = [l.split()[0] for l in open(os.path.join(AS, 'en_spell_ok.txt'), encoding='utf-8')][:20000]
+for w in en:
     if w.isalpha() and w.islower() and w[-1] in 'aeo': stretch.append(w + w[-1] * 2)
+    m = re.match(r'^(.*?)(aa|ee|oo)(.*)$', w)   #a key typed once too often in English: "beeer", "cheeers" (review of D72)
+    if m and w.isalpha() and w.islower(): stretch.append(m.group(1) + m.group(2) + m.group(2)[0] + m.group(3))
 stretch = sorted(set(stretch))
 res = subprocess.run([HARNESS, 'lines'], input=''.join(f'1\t{k} \n' for k in stretch), capture_output=True, text=True, check=True).stdout.rstrip('\n').split('\n')
 compare('stretch.tsv', [f'{k}\t{r}' for k, r in zip(stretch, res)], lambda o, n: print(f'  {o.split(chr(9))[0]}: before {o.split(chr(9))[1:]!r} now {n.split(chr(9))[1:]!r}'))

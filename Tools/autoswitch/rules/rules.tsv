@@ -350,7 +350,7 @@ D70	1	chuwaaa 	chưaaa 	1	a e o typed three times in a row (the Telex undo of ^ 
 D70	1	chuwxaaa 	chữaaa 	1	same with a tone (was put back to its keys and switched)
 D70	1	chuwaaax 	chữaaa 	1	a tone after them goes on the syllable (was "chưaax")
 D70	1	cuaaar 	củaaa 	1	same without ư (was "cuaar")
-D70	1	baaas 	báaa 	1	same (was "baas")
+D70	1	baaas 	báaa 	1	same (was "baas"): "baas" is English but "bá" is more common
 D70	1	chuwxaaa tooi ddi 	chữaaa tôi đi 	1	the next words stay Vietnamese (was two switches)
 D70	1	chuwxaaa, tooi ddi	chữaaa, tôi đi	1	same at a comma
 D70	1	heeej 	hẹee 	1	the cost: a key typed twice by mistake reads as a stretch too ("hệ" meant; was "heej")
@@ -378,3 +378,11 @@ D72	1	xooong 	xoong 	1	a letter after the three o: the Telex undo after all ("xo
 D72	1	ooocx 	oõc 	1	same with a tone between
 D72	1	chuwaaa< 	chưaa 	1	Backspace in the stretch: two copies left stay a stretch, not a slip (D10)
 D72	1	nhesee< 	nhée 	1	same with the tone among the keys
+D72	1	beeer 	bẻee 	1	a tone key after three e: "beer" is English but "bẻ" is Vietnamese and common, decided as for a word that is both (D63)
+D72	1	cheeers 	cheeers 	1	a tone key after three e that ends an English word with the run cut to two, more common than the syllable ("cheer", "chẻ"): no tone, every key shows (review: was "chéee")
+D72	1	pooor 	pooor 	1	same (review: was "pỏoo")
+D72	1	careeer 	careeer 	1	same, no letter lost (review: was "caeeer")
+D72	1	nhesees 	nheees 	0	the same tone key again undoes the tone and switches, the first press goes (D19, as "goyyyyyff"); was "nhesees" only because Telex dropped an e
+D72	1	cuaaar 	củaaa 	1	unchanged: "cuar" is no English word, the tone goes on the syllable
+D71	1	a]aa	aưa	1	a hook given back after the ^ letter is sent again too (review: showed "aua" while the word held "aưa")
+D71	1	a]aas	aứa	1	same: the tone goes on the ư the word holds, as shown (the ư seemed to come from nowhere: "aua" + s gave "aứa")
