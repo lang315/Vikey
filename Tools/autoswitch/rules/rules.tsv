@@ -76,7 +76,7 @@ D18	1	err 	err 	0	both presses stay when they make an English word (D8)
 D18	1	boss 	boss 	0	both presses stay: boss
 D18	1	seemed 	seemed 	0	a key Telex dropped ("eee" undo) counts for the English check: seemed, not "semed"
 D18	1	cheese, 	cheese, 	0	same before a comma: cheese, not "chees"
-D18	1	aaa 	aa 	1	typing a vowel three times is still Telex for two ("aa"), no switch
+D18	1	aaa 	aaa 	1	typing a vowel three times: no switch (every key shows since D72, was "aa")
 D19	1	verr 	ver 	0	doubled tone key gives Telex's "ver" like other input methods; both letters only when they make an English word (Tony)
 D19	1	terrible 	terrible 	0	shows "ter" mid-word, the end of the word restores the double letter: terrible
 D19	1	sorry 	sorry 	0	same: sorry
@@ -220,25 +220,25 @@ D60	1	chi phis 	chi phí 	1	never when the letters are a Vietnamese word: phis (
 D60	0	chi phis 	chi phí 	1	same in EN mode
 D60	1	thans 	thán 	1	a guessed form that isn't a real English word stays Vietnamese
 D60	0	crypto nos volatile 	crypto nó volatile 	1	words already in the frequency list keep their own score: D22's nos -> nó stays
-D62	1	a oroo	a ỏo	1	undoing â/ê/ô on a toned first letter: the letter comes back as a character, not a key code (was NUL)
-D62	1	a asaa	a áa	1	same with a
-D62	1	a eree	a ẻe	1	same with e
-D62	1	a toroo	a tỏo	1	with a consonant before it already worked
+D62	1	a oroo	a ỏoo	1	undoing â/ê/ô on a toned first letter: the letter comes back as a character, not a key code (was NUL)
+D62	1	a asaa	a áaa	1	same with a
+D62	1	a eree	a ẻee	1	same with e
+D62	1	a toroo	a tỏoo	1	with a consonant before it already worked
 D62	1	a orww	a ỏw	1	undoing ơ on a toned first letter (w twice): same fix
 D62	1	a asww	a áw	1	same with ă
 D62	1	a urww	a ủw	1	same with ư
 D63	1	gofyyy	gòyyy	1	a stretched ending is no part of the vowels: the tone stays on the o (was goyyỳ)
 D63	1	hayfyyy	hàyyyy	1	same: was hayyyỳ
-D63	1	quasaaa	quáaa	1	same after the Telex undo of â: was quaaá
-D63	1	ddoosooo	đóooo	1	same: was đooóo
-D63	1	a orooooo	a ỏoooo	1	same at the start of a word: was oooỏo
+D63	1	quasaaa	quáaaa	1	same after the Telex undo of â: was quaaá
+D63	1	ddoosooo	đóoooo	1	same: was đooóo
+D63	1	a orooooo	a ỏooooo	1	same at the start of a word: was oooỏo
 D63	1	xooofng	xoòng	1	a consonant after the oo: the tone goes back to the second o (xoòng, boóng)
 D63	1	boosong	boóng	1	same
 D63	1	thefmmmmm 	thèmmmmm 	1	a stretched Vietnamese word stays Vietnamese at its end (was put back to its keys and switched to English)
 D63	1	gofyyyyy 	gòyyyyy 	1	same, teencode gòy (D53)
-D63	1	orooooo 	ỏoooo 	1	same, after the Telex undo of ô
+D63	1	orooooo 	ỏooooo 	1	same, after the Telex undo of ô
 D63	1	gifiii 	gìiii 	1	the stretched i is the i of gi
-D63	1	cuaraaa 	củaaa 	1	the tone stays on the u: the stretched a is no end consonant
+D63	1	cuaraaa 	củaaaa 	1	the tone stays on the u: the stretched a is no end consonant
 D63	1	ddaayyyy 	đâyyyy 	1	was put back to its keys (restore if wrong spelling)
 D63	1	khoongggg 	khôngggg 	1	same
 D63	1	uwfmmmm 	ừmmmm 	1	same
@@ -254,7 +254,7 @@ D63	1	goyyyyyf 	gòyyyyy 	1	the tone typed after the stretch goes on the syllabl
 D63	1	goyyyyf 	gòyyyy 	1	same (as reported)
 D63	1	themmmmf 	thèmmmm 	1	same, after an end consonant
 D63	1	hoyyyyyf 	hoyyyyyf 	1	as hofy: hòy is no known word, put back to its keys (stays Vietnamese: D68)
-D63	1	cuaaaar 	củaaa 	1	same, a/e/o (Telex took one a as an undo)
+D63	1	cuaaaar 	củaaaa 	1	same, a/e/o (every key shows since D72; Telex took one a as an undo before)
 D63	1	ddaayyyyj 	đậyyyy 	1	same, after â
 D63	1	goyyyyyf tooi ddi 	gòyyyyy tôi đi 	1	the next words are Vietnamese
 D63	1	goyyyyyff 	goyyyyyf 	0	the tone key again undoes the tone, as goyff does (D19)
@@ -331,3 +331,50 @@ D68	1	Airbnb last minute 	Airbnb last minute 	0	a capitalised name no word one s
 D68	1	Lyft has a bug 	Lyft has a bug 	0	a short name one dropped letter from a word (Lỳ) still switches: only a doubled letter may be dropped (review: was "Lyft há")
 D68	1	Deezer tax 	Deezer tax 	0	same (review: was "Deezer tã")
 D68	1	caraja has 	caraja has 	0	a word Telex undid a key of (a-a) is no slip: put back with every key and switched (since D68 it gave "caraj há")
+D69	1	cawn beejnh khos chuwxaaaa 	căn bệnh khó chữaaaa 	1	a stretched "chữa" kept its ư (as reported: was "chũaaa"): ưa + a gave uâ, the next a undoes the ^ and gives the hook back
+D69	1	chuwxaaa	chữaaa	1	while typing too: the a that undoes the ^ brings the ư back (was chũaa)
+D69	1	nuwxaaaa 	nữaaaa 	1	same for nữa
+D69	1	giuwxaaaa 	giữaaaa 	1	same after gi
+D69	1	vuwfaaaa 	vừaaaa 	1	same with another tone
+D69	1	chuwaaaax 	chữaaaa 	1	a tone after the stretch (D63) goes on the ư
+D69	1	muwaaaaf 	mừaaaa 	1	same
+D69	1	chuwxaaaa, tooi ddi	chữaaaa, tôi đi	1	at a comma too, and the next words stay Vietnamese
+D69	1	chuwxaaaa<<<<a 	chữa 	1	Backspace into the stretch keeps the ư (four ⌫: every a shows since D72)
+D69	1	Chuwxaaaa 	Chữaaaa 	1	a capital first letter
+D69	1	nuawxaaaa 	nữaaaa 	1	w typed after the a
+D69	1	chwxaaaa 	chữaaaa 	1	ư from a w on its own
+D69	1	ch]xaaaa 	chữaaaa 	1	ư from ] (D65)
+D69	1	quawaa 	quaa 	1	unchanged: the w made an ă, no ư
+D69	1	chuwwaaa 	chuwaaa 	1	unchanged: ww is a w, no ư
+D70	1	chuwaaa 	chưaaa 	1	a e o typed three times in a row (the Telex undo of ^ among them) are a stretch, not a slip (D10); three copies since D72
+D70	1	chuwxaaa 	chữaaa 	1	same with a tone (was put back to its keys and switched)
+D70	1	chuwaaax 	chữaaa 	1	a tone after them goes on the syllable (was "chưaax")
+D70	1	cuaaar 	củaaa 	1	same without ư (was "cuaar")
+D70	1	baaas 	báaa 	1	same (was "baas")
+D70	1	chuwxaaa tooi ddi 	chữaaa tôi đi 	1	the next words stay Vietnamese (was two switches)
+D70	1	chuwxaaa, tooi ddi	chữaaa, tôi đi	1	same at a comma
+D70	1	heeej 	hẹee 	1	the cost: a key typed twice by mistake reads as a stretch too ("hệ" meant; was "heej")
+D70	1	khoongg 	khoongg 	1	unchanged: two copies of a letter Telex doesn't undo are a slip (D10)
+D71	1	quasaa 	quáaa 	1	same: "quá" + aa (was put back to its keys and switched)
+D71	1	nguwowfooo	ngườooo	1	the Telex undo of ^ gives back every hook the ^ took: ươ + o gave uô, the next o gave "nguờoo" (lost the ư)
+D71	1	huwowooo 	hươooo 	1	same without a tone ("hươ tay")
+D71	1	nhesee 	nhéee 	1	a stretch with the tone typed among its three keys ("nhé" + ee; was put back to its keys and switched)
+D71	1	nheese 	nhéee 	1	same, the tone between the ^ and its undo
+D71	1	nhesee tooi ddi 	nhéee tôi đi 	1	the next words stay Vietnamese
+D71	1	xuwaan 	xuân 	1	a ^ that takes the hook off another vowel sends it again: the screen showed "xưân" while the word held "xuân"
+D71	1	tuwaan 	tuân 	1	same (was "tưân")
+D71	1	muwaa	muâ	1	same while typing (was "mưâ"), as with a tone ("muwxaa" gives "muẫ")
+D71	1	muwaaa	mưaaa	1	the next a undoes the ^ and gives the hook back
+D71	1	chuwaa<a 	chưa 	1	Backspace on a ^ just made gives back the hooks it took: an a too many in "chưa" ("chuâ"), ⌫, a is "chưa" (the screen kept the ư before only because it was out of step with the word)
+D71	1	xuwaa<n 	xưn 	1	same
+D71	1	huwowo<a 	hưa 	1	same after ươ + o
+D71	1	chuwxaa<a 	chưa 	1	same with a tone: the tone went with the â, the ư stays (was "chua")
+D72	1	chuwaaa	chưaaa	1	every key shows: the a that undoes the ^ keeps the a the ^ took (was "chưaa"), as "ờooo" (D64)
+D72	1	cawn beejnh khos chuwxaaaa 	căn bệnh khó chữaaaa 	1	as reported: four a keys after "chữ", four a (was "chữaaa")
+D72	1	cuaaa	cuaaa	1	same without ư (was "cuaa")
+D72	1	nhesee 	nhéee 	1	a tone among the three keys (D71)
+D72	1	caraja has 	caraja has 	0	two tones among them: no stretch, the Telex undo as before (D68)
+D72	1	xooong 	xoong 	1	a letter after the three o: the Telex undo after all ("xoong"), the kept o goes
+D72	1	ooocx 	oõc 	1	same with a tone between
+D72	1	chuwaaa< 	chưaa 	1	Backspace in the stretch: two copies left stay a stretch, not a slip (D10)
+D72	1	nhesee< 	nhée 	1	same with the tone among the keys

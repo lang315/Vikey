@@ -88,6 +88,13 @@ static Uint32 KeyStates[MAX_BUFF];
 static int _asDropN = 0;
 static int _asDropPos[AS_MAX_DROPS];
 static Uint32 _asDropKey[AS_MAX_DROPS];
+//the hooks a ^ took off the vowels ("ưa" + a is "uâ", "ươ" + o is "uô"): where that ^ is, the keys typed up to it,
+//and the vowels that had a hook. The key that undoes that ^ gives them back (D69, D71).
+static int _hatPos = -1, _hatState = 0, _hatHornN = 0;
+//the copy a stretch kept (D72): where it is in the word, the key it came with in KeyStates, the word's length then
+static int _keptAt = -1, _keptKey = 0, _keptIndex = 0;
+static int dropKeptCopy(const Uint16& data);
+static Byte _hatHorn[3];
 /** The keys as typed: the key states with the dropped keys put back. Returns how many. */
 static int asStatesWithDrops(Uint32* full, const int& maxN);
 static Byte _stateIndex = 0;
@@ -222,7 +229,20 @@ static int asStretchStart(const int& minRun) {
         s--;
         if ((TypingWord[s] & MARK_MASK) || horn) break;   //the toned letter, or the ơ, starts the run
     }
-    return s <= _index - minRun ? s : -1;
+    //a e o: two copies left by Backspace in a stretch ("chưaaa" ⌫, D72). Typed, two give a ^ ("chuâ"): no slip when
+    //their keys are in a row (one tone key may come among them) and Telex dropped no key ("caraja" is "cạa": a slip)
+    int need = minRun;
+    if (minRun > 2 && (key == KEY_A || key == KEY_E || key == KEY_O) && _asDropN == 0) {
+        int x = _stateIndex - 1, got = 0, tones = 0;
+        while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;   //a tone typed after them
+        for (; x >= 0 && got < 2; x--) {
+            Uint16 k = (Uint16)(KeyStates[x] & CHAR_MASK);
+            if (k == key) got++;
+            else if (!IS_MARK_KEY(k) || ++tones > 1) break;
+        }
+        if (got == 2) need = 2;
+    }
+    return s <= _index - need ? s : -1;
 }
 
 void checkSpelling(const bool& forceCheckVowel=false) {
@@ -547,6 +567,8 @@ void restoreLastTypingState() {
 
 void startNewSession() {
     _asDropN = 0;
+    _hatPos = -1;
+    _keptAt = -1;
     _index = 0;
     hBPC = 0;
     hNCC = 0;
@@ -940,6 +962,18 @@ void insertD(const Uint16& data, const bool& isCaps) {
 }
 
 static bool _hornBack = false;   //this key brought an ơ back with the o the ô took (D64)
+static bool _keepBoth = false;   //this key undid a ^ and kept the letter the ^ took: "chưa" + aa is "chưaaa" (D72)
+/** The key just typed is the third of a / e / o typed in a row, at most one tone key among them ("aaa", "asaa", "aasa"):
+ *  where the second, the one that made the ^, is in KeyStates, or -1. Two tones among them are typed apart ("caraja"). */
+static int undoKeyInARow(const Uint16& key) {
+    int got = 0, tones = 0, mid = -1;
+    for (int x = _stateIndex - 1; x >= 0 && got < 3; x--) {
+        Uint16 k = (Uint16)(KeyStates[x] & CHAR_MASK);
+        if (k == key) { if (++got == 2) mid = x; }
+        else if (!IS_MARK_KEY(k) || ++tones > 1) return -1;
+    }
+    return got == 3 ? mid : -1;
+}
 /** The ô at the end of the word was an ơ until the last o: its keys are o, w, o or [, o (D65), with tone keys
  *  anywhere ("owfo", "[fo"). Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D64). */
 static int hornTurnedHat() {
@@ -953,12 +987,22 @@ static int hornTurnedHat() {
     return k == KEY_W || k == KEY_LEFT_BRACKET ? o : -1;
 }
 
+/** Only tone keys typed since the ^ at _hatPos was made: this key undoes that ^. */
+static bool hatJustMade() {
+    if (_hatPos < 0 || _stateIndex - 1 < _hatState || !wordFitsBuffer()) return false;
+    for (int x = _hatState; x < _stateIndex - 1; x++)
+        if (!IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) return false;
+    return true;
+}
+
 void insertAOE(const Uint16& data, const bool& isCaps) {
     findAndCalculateVowel();
-    int hornO = -1;
-    
+    int hornO = -1, hornLo = MAX_BUFF, keep = -1;
+    Byte took[3]; int tookN = 0;
+
     //remove W tone
     for (ii = VSI; ii <= VEI; ii++) {
+        if ((TypingWord[ii] & TONEW_MASK) && tookN < 3) took[tookN++] = (Byte)ii;
         TypingWord[ii] &= ~TONEW_MASK;
     }
     
@@ -975,6 +1019,14 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 //"ờ" + oo is a stretched o: ơ + o gave ô ("tuowoj" is "tuộ"), the next o brings the ơ back with that o (D64)
                 if (data == KEY_O && ii == _index - 1 && _index < MAX_BUFF - 1 && (hornO = hornTurnedHat()) >= 0)
                     TypingWord[ii] |= TONEW_MASK;
+                //"chưa" + aa, "của" + aa, "nhé" + ee: a stretch, every key shows (D72). Not for d: "ddd" stays "dd"
+                else if (!IS_KEY_D(data) && ii == _index - 1 && _index < MAX_BUFF - 1 && wordFitsBuffer())
+                    keep = undoKeyInARow(data);
+                //"chữa" + aa, "hươ" + oo are stretched: the undo gives back the hooks the ^ took off the other vowels (D69, D71)
+                if (ii == _hatPos && hatJustMade())
+                    for (int h = 0; h < _hatHornN; h++)
+                        if (_hatHorn[h] != ii) { TypingWord[_hatHorn[h]] |= TONEW_MASK; if (_hatHorn[h] < hornLo) hornLo = _hatHorn[h]; }
+                _hatPos = -1;
                 hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D62)
                 //_index = 0;
                 if (data != KEY_O) //case thoòng
@@ -985,17 +1037,20 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 if (!IS_KEY_D(data))
                     TypingWord[ii] &= ~TONEW_MASK;
                 hData[_index - 1 - ii] = GET(TypingWord[ii]);
-                
+                _hatPos = ii; _hatState = _stateIndex; _hatHornN = tookN;
+                memcpy(_hatHorn, took, sizeof(took));
+                for (int h = 0; h < tookN; h++) if (took[h] < hornLo) hornLo = took[h];   //sent again: "xuwaan" showed "xưân" (D71)
             }
             break;
         } else { //preresent old char
             hData[_index - 1 - ii] = GET(TypingWord[ii]);
         }
     }
+    for (int p = ii - 1; p >= hornLo; p--) hData[hBPC++] = GET(TypingWord[p]);   //the hooks on screen too (D69)
     hNCC = hBPC;
-    if (hornO >= 0) {   //the o the ô took, after the ơ (this o is added by the caller, vRestore)
-        _hornBack = true;
-        setKeyData(_index, KEY_O, KeyStates[hornO] & CAPS_MASK);
+    if (hornO >= 0 || keep >= 0) {   //the o the ô took, after the ơ (this o is added by the caller, vRestore)
+        if (hornO >= 0) _hornBack = true; else _keepBoth = true;
+        setKeyData(_index, hornO >= 0 ? KEY_O : data, KeyStates[hornO >= 0 ? hornO : keep] & CAPS_MASK);
         memmove(hData + 1, hData, hNCC * sizeof(hData[0]));
         hData[0] = GET(TypingWord[_index++]);
         hNCC++;
@@ -2146,6 +2201,8 @@ struct AsEngineState {
     Byte index, stateIndex;
     bool tempDisable, useSpellingBefore, wordStartOk, statesLost;
     int dropN; int dropPos[AS_MAX_DROPS]; Uint32 dropKey[AS_MAX_DROPS];
+    int hatPos, hatState, hatHornN; Byte hatHorn[3];
+    int keptAt, keptKey, keptIndex;
     int spaceCount, checkSpelling, language;
     vector<Uint32> longWord, special, statesData;
     list<vector<Uint32>> typing;
@@ -2159,6 +2216,8 @@ static void asSaveState(AsEngineState& st) {
     st.tempDisable = tempDisableKey; st.useSpellingBefore = _useSpellCheckingBefore;
     st.wordStartOk = _asWordStartOk;
     st.dropN = _asDropN; memcpy(st.dropPos, _asDropPos, sizeof(_asDropPos)); memcpy(st.dropKey, _asDropKey, sizeof(_asDropKey));
+    st.hatPos = _hatPos; st.hatState = _hatState; st.hatHornN = _hatHornN; memcpy(st.hatHorn, _hatHorn, sizeof(_hatHorn));
+    st.keptAt = _keptAt; st.keptKey = _keptKey; st.keptIndex = _keptIndex;
     st.spaceCount = _spaceCount; st.checkSpelling = vCheckSpelling;
     st.language = vLanguage;
     st.longWord.swap(_longWordHelper);
@@ -2175,6 +2234,8 @@ static void asRestoreState(AsEngineState& st) {
     tempDisableKey = st.tempDisable; _useSpellCheckingBefore = st.useSpellingBefore;
     _asWordStartOk = st.wordStartOk;
     _asDropN = st.dropN; memcpy(_asDropPos, st.dropPos, sizeof(_asDropPos)); memcpy(_asDropKey, st.dropKey, sizeof(_asDropKey));
+    _hatPos = st.hatPos; _hatState = st.hatState; _hatHornN = st.hatHornN; memcpy(_hatHorn, st.hatHorn, sizeof(_hatHorn));
+    _keptAt = st.keptAt; _keptKey = st.keptKey; _keptIndex = st.keptIndex;
     _spaceCount = st.spaceCount; vCheckSpelling = st.checkSpelling;
     vLanguage = st.language;
     _longWordHelper.swap(st.longWord);
@@ -2384,6 +2445,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
     if (_navSaved) navForget();
     _appendedStandalone = false;
     _hornBack = false;
+    _keepBoth = false;
     _isCaps = (capsStatus == 1 || //shift
                capsStatus == 2); //caps lock
     bool literalOnly = false;
@@ -2470,6 +2532,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         _asWordStartOk = true;
     } else if (data == KEY_DELETE) {
         _asPrevCount = 0;
+        _keptAt = -1;
         hCode = vDoNothing;
         hExt = 2; //delete
         if (_specialChar.size() > 0) {
@@ -2483,6 +2546,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 restoreLastTypingState();
             }
         } else {
+            int hornLo = MAX_BUFF;
             if (_stateIndex > 0) {
                 _stateIndex--;
                 while (_asDropN > 0 && _stateIndex < _asDropPos[_asDropN - 1]) _asDropN--;
@@ -2493,7 +2557,15 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 bool several = (TypingWord[_index] & (TONE_MASK | TONEW_MASK | MARK_MASK)) != 0;
                 bool plain = true;
                 for (int x = 0; x < _index && plain; x++) plain = (TypingWord[x] & (TONE_MASK | TONEW_MASK | MARK_MASK | STANDALONE_MASK | CHAR_CODE_MASK)) == 0;
+                bool hatGone = _index == _hatPos && _stateIndex + 1 == _hatState;   //before the keys are rebuilt below
                 if (several && plain && _longWordHelper.empty()) asResyncStates();
+                //the ^ just made went: the vowels get back the hooks it took ("chưa" + a is "chuâ", ⌫ is "chư", D71)
+                if (hatGone && _longWordHelper.empty() && wordFitsBuffer()) {
+                    for (int h = 0; h < _hatHornN; h++)
+                        if (_hatHorn[h] < _index) { TypingWord[_hatHorn[h]] |= TONEW_MASK; if (_hatHorn[h] < hornLo) hornLo = _hatHorn[h]; }
+                    if (hornLo < _index) asResyncStates();
+                }
+                _hatPos = -1;
                 if (_longWordHelper.size() > 0) {
                     //right shift
                     for (i = MAX_BUFF - 1; i > 0; i--) {
@@ -2515,6 +2587,12 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 restoreLastTypingState();
             } else { //August 23rd continue check grammar
                 checkGrammar(1);
+                if (hCode == vDoNothing && hornLo < _index) {   //send the vowels with their hooks again, after the ⌫ (D71)
+                    hCode = vWillProcess;
+                    for (int p = _index - 1; p >= hornLo; p--) hData[hNCC++] = GET(TypingWord[p]);
+                    hBPC = hNCC + 1;
+                    hExt = 4;
+                }
             }
         }
     } else { //START AND CHECK KEY
@@ -2530,6 +2608,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             saveSpecialChar();
         }
 
+        int shownBefore = dropKeptCopy(data);   //"xooo" + n is "xoon" (D72)
         insertState(data, _isCaps); //save state
         if (tempDisableKey && IS_MARK_KEY(data) && asStretchTakesTone()) tempDisableKey = false;   //"goyyyyyf" (D63)
         
@@ -2574,15 +2653,22 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (!IS_KEY_D(data) && !_hornBack) {   //"ờoo": the tone is on the ơ already (D64)
             //moving the tone onto a just-added ư ("ís" + w -> "iứ"): that ư isn't on screen yet, so one fewer to delete
             //(it took the space before the word: "ab isw" gave "abiứ", D52)
-            if (hCode == vDoNothing || _appendedStandalone) {
+            if (_keepBoth) {   //the letter the ^ took isn't on screen yet: one fewer to delete (D72)
+                //insertMark rewrites the output even when the tone stays where it is: keep this key's own then
+                Uint32 out[MAX_BUFF]; int bpc = hBPC, ncc = hNCC, ext = hExt;
+                memcpy(out, hData, ncc * sizeof(hData[0]));
+                checkGrammar(-1);
+                if (!isCheckedGrammar) { hBPC = bpc; hNCC = ncc; hExt = ext; memcpy(hData, out, ncc * sizeof(hData[0])); }
+            } else if (hCode == vDoNothing || _appendedStandalone) {
                 checkGrammar(-1);
             } else {
                 checkGrammar(0);
             }
         }
         
-        if (hCode == vRestore && _hornBack) {
+        if (hCode == vRestore && (_hornBack || _keepBoth)) {
             insertKey(data, _isCaps);   //every key is a letter again ("owfoo" is "ờoo"): no key dropped (D64)
+            if (_keepBoth) { _keptAt = _index - 2; _keptKey = _stateIndex - 1; _keptIndex = _index; }
         } else if (hCode == vRestore) {
             insertKey(data, _isCaps);
             if (_stateIndex > 0 && vAutoSwitchRequest != 0) {
@@ -2604,12 +2690,43 @@ void vKeyHandleEvent(const vKeyEvent& event,
             hExt = 3;
             _specialChar.push_back(data | (_isCaps ? CAPS_MASK : 0));
         }
+        if (shownBefore >= 0 && _index > 0) {   //the copy went: the whole word again, this key in it
+            hCode = vWillProcess;
+            hBPC = shownBefore;
+            hNCC = _index;
+            for (int x = 0; x < _index; x++) hData[_index - 1 - x] = GET(TypingWord[x]);
+        }
     }
     
     //Debug
     //cout<<"index "<<(int)_index<< ", stateIndex "<<(int)_stateIndex<<", word "<<_typingStates.size()<<", long word "<<_longWordHelper.size()<< endl;
     //cout<<"backspace "<<(int)hBPC<<endl;
     //cout<<"new char "<<(int)hNCC<<endl<<endl;
+}
+
+/** A letter after a stretch that kept every key ("xooo" + n): no stretch but the Telex undo ("xoong", "oóc"). The copy kept
+ *  goes, the undo key is dropped as before D72, and a tone on the copy goes back on the syllable. Called before the key is
+ *  saved. Returns how many letters of the word were on screen, to send the whole word again, or -1. */
+static int dropKeptCopy(const Uint16& data) {
+    if (IS_MARK_KEY(data) || IS_KEY_Z(data)) return -1;   //a tone after the stretch: still one ("cuaaar", "xooofng")
+    int at = _keptAt;
+    _keptAt = -1;
+    if (at < 0 || _index != _keptIndex || at >= _index || data == CHR(at) ||
+        !wordFitsBuffer() || !_longWordHelper.empty()) return -1;
+    asInitLetters();
+    if (!asLetterOf(data)) return -1;
+    for (int x = _keptKey + 1; x < _stateIndex; x++)   //tone keys may come between ("xooofng")
+        if (!IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) return -1;
+    int shown = _index;
+    Uint32 mark = TypingWord[at] & MARK_MASK;
+    memmove(TypingWord + at, TypingWord + at + 1, (_index - at - 1) * sizeof(Uint32));
+    _index--;
+    if (_asDropN == AS_MAX_DROPS) { memmove(_asDropPos, _asDropPos + 1, sizeof(int) * (AS_MAX_DROPS - 1)); memmove(_asDropKey, _asDropKey + 1, sizeof(Uint32) * (AS_MAX_DROPS - 1)); _asDropN--; }
+    _asDropPos[_asDropN] = _keptKey; _asDropKey[_asDropN] = KeyStates[_keptKey]; _asDropN++;
+    memmove(KeyStates + _keptKey, KeyStates + _keptKey + 1, (_stateIndex - _keptKey - 1) * sizeof(Uint32));
+    _stateIndex--;
+    if (mark) insertMark(mark, false);
+    return shown;
 }
 
 bool vAutoSwitchFixDoubledKey(const Uint32* keys, const int& count) {
