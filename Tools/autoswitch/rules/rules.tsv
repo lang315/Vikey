@@ -320,3 +320,7 @@ D68	1	tiengs 	tiengs 	1	and as the first word
 D68	1	This Airbnb 	This Airbnb 	0	unchanged: after a word that leans English an unknown word is a foreign word, and fixes that word (Thí)
 D68	1	makes tiengs 	makes tiengs 	0	unchanged: the same after an English-only word
 D68	1	Asana 	Asana 	0	unchanged: several syllables are a foreign word, also when Telex undid a key on the way (a-s-a-n-a)
+D68	1	Huawei has a bug 	Huawei has a bug 	0	a capitalised word is a name, not a slip: it switches as before, so "has" stays English (review: was "Huawei há")
+D68	1	Casio tax 	Casio tax 	0	same (was "Casio tã")
+D68	1	car bajnn 	cả bajnn 	1	after a tie read as Vietnamese (cả) the slip stays Vietnamese too (was "car bajnn", English)
+D68	1	been bajnn ddi 	bên bajnn đi 	1	same after been / bên

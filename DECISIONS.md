@@ -15,7 +15,7 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 
 After the switch the next word shows as its keys until its space ("lats", then "lát").
 
-**Measured.** One typo (neighbouring key, dropped, doubled or swapped letter) in each of 4,539 Vietnamese words of the chat and synthetic corpora, typed in Vietnamese mode: 12.2% left the engine in English.
+**Measured.** One typo (neighbouring key, dropped, doubled or swapped letter) in each of 4,541 lowercase Vietnamese words of the chat and synthetic corpora, typed in Vietnamese mode (a scratch script, not in the repo): 12.2% left the engine in English.
 
 | Why it switched | Before | Now |
 |---|---|---|
@@ -25,23 +25,25 @@ After the switch the next word shows as its keys until its space ("lats", then "
 | The typo is an English word ("how" for "hơn"), right | 0.9% | 0.9% |
 | All | 12.2% | 6.9% |
 
-**Fix.** Such a word still goes back to its keys, but the language stays Vietnamese when:
-- its keys are one syllable, counted past the Telex keys typed inside it and with the keys Telex undid on the way ("Asana" is three syllables);
-- the word before doesn't lean English: "This Airbnb" and "makes tiengs" switch as before, and "Thí" still becomes "This";
-- it is no English word with its last letter stretched ("testtt", D63).
+**Fix.** Such a word is no longer an unknown foreign word when all of these hold. Restore-if-wrong-spelling (D10) handles it as it handles "khoongg": it goes back to its keys and the language stays.
+- Its keys are one syllable, counted past the Telex keys typed inside it and with the keys Telex undid on the way ("Asana" is three syllables).
+- It starts with a lowercase letter. A capitalised word is a name and switches as before: "Huawei has a bug", "Casio tax" (a review of the first version gave "Huawei há", "Casio tã").
+- The word before doesn't read English at least ~30x more often than Vietnamese (the "thí makes" margin): "This Airbnb" and "makes tiengs" switch as before. After a tie read as Vietnamese the slip stays Vietnamese: "car bajnn" gives "cả bajnn" (it switched before).
+- It is no English word with its last letter stretched ("testtt", D63).
 
-Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. Cases tagged D68 in `rules.tsv`.
+Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. With restore-if-wrong-spelling off, the typo stays as shown ("bạnn"), as "khoongg" does. Cases tagged D68 in `rules.tsv`.
 
 **Result.**
-- Typed-text goldens (chat, chat with typos, synthetic): unchanged.
-- Manual switches: chat with typos 70 → 68. Synthetic 110 → 111: "Airbnb last minute", where a one-syllable brand name that starts the sentence no longer switches, so "last" waits for look-back at "minute". The lazy typist's text is the same.
-- Realistic typing, back-into-word slips fixed by hand: 425 → 419.
+- Goldens: chat with typos, one line changed: the typo "ddpori" now shows "đpori", the text the corpus meant. Chat and synthetic unchanged.
+- Metrics: chat with typos 70 → 68 manual switches, 7 → 6 wrong words. Chat and synthetic unchanged.
+- Realistic typing, back-into-word slips fixed by hand: 425 → 424.
 - Telex lock: 12 syllables typed with one key too many ("cuooocf", "dduwuwcj") keep their text and now stay Vietnamese.
 - Rules: "oxy" (D53) and "hoyyyyyf" (D63) keep their text and now stay Vietnamese.
 
 **Not covered.**
 - A doubled tone key ("coss", "maff") still switches to English in the middle of the word (D5.1, D19). It is now the largest part left.
 - A typo that reads as two syllables: "toota" (tốt), "enen" (nên).
+- A capitalised typo ("Bajnn" at the start of a sentence) still switches. The next word, if clearly Vietnamese, switches back: "Bajnn ddi" gives "Bajnn đi".
 - The typo itself still shows as its keys ("tiengs"), as before (D10).
 - Backspace twice right after such a typo no longer brings the marked word back ("bạnn"): nothing switched, so there is nothing to undo. Backspace goes back into the word as typed, as in "khoongg" (D10). `driver/undo_test` has both cases.
 

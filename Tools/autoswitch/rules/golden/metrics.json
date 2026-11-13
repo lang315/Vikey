@@ -5,10 +5,10 @@
  },
  "chat_typos": {
   "manual": 68,
-  "wrong": 7
+  "wrong": 6
  },
  "synthetic": {
-  "manual": 111,
+  "manual": 110,
   "wrong": 9
  }
 }
