@@ -1779,6 +1779,7 @@ static bool asHasLiteralWordShape(const Uint32* keys, int count, bool telexToneE
     return asHasInternalCapital(keys, count) || asHasSeparatedVowels(keys, count, telexToneEdits);
 }
 
+static bool _asSlip = false;   //the word going back to its keys is a slip in a Vietnamese word: no switch to English (D68)
 static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
     if (!asEnabled() || !_asWordStartOk) return false;
     asInitLetters();
@@ -1887,7 +1888,19 @@ static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
         checkSpelling(true);
         bool invalid = tempDisableKey;
         tempDisableKey = savedTemp;
-        if (invalid) return true;
+        if (invalid) {
+            //A marked word of one syllable is a slip in a Vietnamese word ("bajnn", "viejt", "thaasyy"), not a foreign
+            //word: it goes back to its keys, the language stays (D68). The syllable is counted past the Telex keys
+            //typed inside it, with the keys Telex undid ("Asana"). Not after a word that leans English ("This
+            //Airbnb"), and not an English word with its last letter stretched ("testtt", D63).
+            Uint32 full[MAX_BUFF];
+            int n = asStatesWithDrops(full, MAX_BUFF - 1);
+            size_t len = strlen(raw);
+            while (len >= 2 && raw[len - 1] == raw[len - 2]) raw[--len] = 0;
+            _asSlip = !(_asPrevCount >= 1 && _asPrev[0].lookbackOk) && !asHasSeparatedVowels(full, n, true) &&
+                      asEnglishScore(raw) == AS_MISSING;
+            return true;
+        }
         literalOnly = asHasLiteralWordShape(KeyStates, _stateIndex, true);
         return literalOnly;
     }
@@ -2057,7 +2070,8 @@ static void asRestoreToEnglish(const int& handleCode, bool literalOnly) {
     for (int x = 0; x < n; x++) hData[n - 1 - x] = out[x];
     _index = _stateIndex;
     _asPrevCount = 0;
-    vAutoSwitchRequest = 0;
+    if (!_asSlip) vAutoSwitchRequest = 0;
+    _asSlip = false;
 }
 
 /** Break keys that end a word for auto switch (not arrows, tab, esc, mouse or shortcuts). */

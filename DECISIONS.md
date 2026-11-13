@@ -5,6 +5,46 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 68. A typo in a Vietnamese word switched to English: "bajnn", "viejt", "thaasyy"
+
+**Status:** Done in the engine, in review (2026-11-13).
+
+**Problem.** A user's report: "when I misspell one word, the word after it switches to English, and I have to delete it and type it again." In Vietnamese mode a word that is in neither word list and is no syllable is put back to its keys and switches to English (unknown foreign words, D8). D9 keeps typos out of that rule, but only words with â ê ô ă ơ ư đ on them, and its syllable count took a tone key or w typed inside the vowels for the end of a syllable. These still switched:
+- a tone mark only: "bajnn" (bạn), "biets" (biết), "viejt" (việt), "tiengs" (tiếng);
+- a Telex key inside the vowels: "thaasyy" (thấy), "chuuwa" (chưa).
+
+After the switch the next word shows as its keys until its space ("lats", then "lát").
+
+**Measured.** One typo (neighbouring key, dropped, doubled or swapped letter) in each of 4,539 Vietnamese words of the chat and synthetic corpora, typed in Vietnamese mode: 12.2% left the engine in English.
+
+| Why it switched | Before | Now |
+|---|---|---|
+| Unknown word, tone mark only | 4.1% | 0.2% |
+| Unknown word with â ê ô ă ơ ư đ | 2.4% | 1.0% |
+| Doubled tone key (D5.1), not changed | 4.8% | 4.8% |
+| The typo is an English word ("how" for "hơn"), right | 0.9% | 0.9% |
+| All | 12.2% | 6.9% |
+
+**Fix.** Such a word still goes back to its keys, but the language stays Vietnamese when:
+- its keys are one syllable, counted past the Telex keys typed inside it and with the keys Telex undid on the way ("Asana" is three syllables);
+- the word before doesn't lean English: "This Airbnb" and "makes tiengs" switch as before, and "Thí" still becomes "This";
+- it is no English word with its last letter stretched ("testtt", D63).
+
+Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. Cases tagged D68 in `rules.tsv`.
+
+**Result.**
+- Typed-text goldens (chat, chat with typos, synthetic): unchanged.
+- Manual switches: chat with typos 70 → 68. Synthetic 110 → 111: "Airbnb last minute", where a one-syllable brand name that starts the sentence no longer switches, so "last" waits for look-back at "minute". The lazy typist's text is the same.
+- Realistic typing, back-into-word slips fixed by hand: 425 → 419.
+- Telex lock: 12 syllables typed with one key too many ("cuooocf", "dduwuwcj") keep their text and now stay Vietnamese.
+- Rules: "oxy" (D53) and "hoyyyyyf" (D63) keep their text and now stay Vietnamese.
+
+**Not covered.**
+- A doubled tone key ("coss", "maff") still switches to English in the middle of the word (D5.1, D19). It is now the largest part left.
+- A typo that reads as two syllables: "toota" (tốt), "enen" (nên).
+- The typo itself still shows as its keys ("tiengs"), as before (D10).
+- Backspace twice right after such a typo no longer brings the marked word back ("bạnn"): nothing switched, so there is nothing to undo. Backspace goes back into the word as typed, as in "khoongg" (D10). `driver/undo_test` has both cases.
+
 ## 67. [ ] and w undoing each other's ơ / ư lost keys: "bow[", "[w"
 
 **Status:** Done in the engine, in review (2026-11-13).

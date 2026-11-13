@@ -4,11 +4,11 @@
   "wrong": 1
  },
  "chat_typos": {
-  "manual": 70,
+  "manual": 68,
   "wrong": 7
  },
  "synthetic": {
-  "manual": 110,
+  "manual": 111,
   "wrong": 9
  }
 }
