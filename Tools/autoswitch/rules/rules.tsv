@@ -250,3 +250,26 @@ D63	1	besttt 	besttt 	0	same
 D63	1	THEFMMMM 	THEFMMMM 	0	2+ capitals keep the acronym rule (D23)
 D63	1	yesss 	yess 	0	a stretched tone key is no stretched letter: doubled tone key as before (D5.1)
 D63	1	hoyyyyy 	hoyyyyy 	1	unchanged: no Telex in it
+D63	1	goyyyyyf 	gòyyyyy 	1	the tone typed after the stretch goes on the syllable before it
+D63	1	goyyyyf 	gòyyyy 	1	same (as reported)
+D63	1	themmmmf 	thèmmmm 	1	same, after an end consonant
+D63	1	hoyyyyyf 	hoyyyyyf 	0	as hofy: hòy is no known word, put back and English
+D63	1	cuaaaar 	củaaa 	1	same, a/e/o (Telex took one a as an undo)
+D63	1	ddaayyyyj 	đậyyyy 	1	same, after â
+D63	1	goyyyyyf tooi ddi 	gòyyyyy tôi đi 	1	the next words are Vietnamese
+D63	1	goyyyyyff 	goyyyyyf 	0	the tone key again undoes the tone, as goyff does (D19)
+D63	1	ditts 	ditts 	1	a run of 2 is a slip (D10): the tone key stays a letter
+D63	1	goyyf 	goyyf 	1	same
+D63	1	eggs 	eggs 	1	no syllable before the run: the tone key stays a letter
+D64	1	owfooo 	ờooo 	1	o after ờ stretches it: the ô the first o made turns back into ơ at the next o
+D64	1	giowfooo 	giờooo 	1	same, in a word
+D64	1	cowfoo 	cờoo 	1	the ơ counts as the first copy: three are a stretch
+D64	1	owoo 	ơoo 	1	without a tone too
+D64	1	Owfooo 	Ờooo 	1	a capital first letter
+D64	1	owfooo tooi ddi 	ờooo tôi đi 	1	the next words are Vietnamese
+D64	1	thowooof 	thờooo 	1	a tone typed after the stretch (D63) goes on the ơ
+D64	1	a giowfooo 	a giờooo 	1	nothing before the word is deleted
+D64	1	mowfoooo<<<< 	mờ 	1	Backspace takes the stretched o one by one
+D64	1	owfo 	ồ 	1	one o after ơ still makes ô, as before
+D64	1	tuowoj 	tuộ 	1	same: people fix a w typed by mistake this way
+D64	1	owooc 	owooc 	1	a word that is no syllable is put back to all its keys (none dropped)
