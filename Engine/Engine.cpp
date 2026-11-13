@@ -1887,7 +1887,20 @@ static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
         checkSpelling(true);
         bool invalid = tempDisableKey;
         tempDisableKey = savedTemp;
-        if (invalid) return true;
+        if (invalid) {
+            //A lowercase marked word of one syllable is a slip in a Vietnamese word ("bajnn", "viejt", "thaasyy"), not
+            //a foreign word: no switch, restore-if-wrong-spelling handles it like "khoongg" (D68). The syllable is
+            //counted past the Telex keys typed inside it, with the keys Telex undid ("Asana"). Not a capitalised word
+            //(names: "Huawei", "Casio"), not after a word that leans English ("This Airbnb"; "car bajnn" is "cả"),
+            //and not an English word with its last letter stretched ("testtt", D63).
+            Uint32 full[MAX_BUFF];
+            int n = asStatesWithDrops(full, MAX_BUFF - 1);
+            size_t len = strlen(raw);
+            while (len >= 2 && raw[len - 1] == raw[len - 2]) raw[--len] = 0;   //as in asStretchedVietnamese
+            bool afterEnglish = _asPrevCount >= 1 && _asPrev[0].lookbackOk && _asPrev[0].en >= _asPrev[0].vn + AS_PLAIN_MARGIN;
+            return afterEnglish || (KeyStates[0] & CAPS_MASK) || asHasSeparatedVowels(full, n, true) ||
+                   asEnglishScore(raw) != AS_MISSING;
+        }
         literalOnly = asHasLiteralWordShape(KeyStates, _stateIndex, true);
         return literalOnly;
     }

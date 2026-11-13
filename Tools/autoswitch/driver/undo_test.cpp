@@ -46,6 +46,8 @@ int main() {
         {"booj source vaay < ", "bộ source vây ", "space again: the fix stays"},
         {"xin |hello|<s", "xin hells", "after a switch Backspace doesn't reopen xin (was xin heín)"},
         {"heelo!vieejt", "hêloviệt", "a click on a word put back to its keys: the next word gets Telex (was vieejt)"},
+        {"tooi bajnn dde<<<<<<<<bajn ddeens ", "tôi bạn đến ", "D68: a typo, the next word begun, both deleted and typed again: Vietnamese (the typo had switched to English, the word typed again stayed as its keys)"},
+        {"tooi bajnn <<", "tôi bajn", "D68: no switch, so nothing to undo: Backspace goes back into the word as typed, as in \"khoongg\" (D10)"},
     };
     int fails = 0;
     for (auto& c : cases) { std::string got = type(c.keys); if (got != c.want) { fails++; printf("FAIL: '%s' -> '%s', want '%s' (%s)\n", c.keys, got.c_str(), c.want, c.why); } }
