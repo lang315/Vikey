@@ -21,7 +21,7 @@ python -c "import runpy, sys, io; sys.stdout = io.TextIOWrapper(open(r'$uu', 'wb
 # driver == simulator (what cmp.sh does, without zsh)
 $env:DRV_OUT = Join-Path $env:TMPDIR 'drv.txt'
 & "$as/driver/drvlazy.exe" $u --start vi | Out-Null
-& "$as/sim/sim.exe" $u --start vi --lazy --dump (Join-Path $env:TMPDIR 'simdump.txt') | Out-Null
+& "$as/sim/sim.exe" $u --start vi --lazy --as-typed --dump (Join-Path $env:TMPDIR 'simdump.txt') | Out-Null
 $cmp = @"
 import os, re
 t = os.environ['TMPDIR']
