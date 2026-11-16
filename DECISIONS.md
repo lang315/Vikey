@@ -5,6 +5,14 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 73. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
+
+**Status:** Bug fix, in review (2026-11-12). Numbered D62 until the sync with upstream 1.0.34, which has its own D62 (Enter sends what's on screen).
+
+**Problem.** A word that starts with a toned vowel, followed by the Telex undo, sent a character the apps can't type: "oroo" (ỏ, ổ, then the undo), "asaa", "eree", "orww", "asww", "urww". The undo handed back the letter as a key code that still had its tone, and no key code has a tone, so the Mac app (and Driver.cpp on iPhone and Android) typed character 0 instead of "ỏ". The next key then deleted one character too many. With a consonant before the vowel ("toroo") the tone check that runs next sent the letter again correctly, which hid the bug. It shows up when people stretch a word: "ỏoooo", "áaaa".
+
+**Fix.** `insertAOE` and `insertW` send the restored letter as a character (`GET`), like every other output path. Cases tagged D73 in `rules.tsv`.
+
 ## 72. A stretch of a / e / o shows every key: "chưaaa", "củaaa", "nhéee"
 
 **Status:** Done in the engine, in review (2026-11-13).
@@ -20,7 +28,7 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 - Backspace in a stretch leaves two copies ("chưaaa" ⌫ is "chưaa"): still a stretch at the end of the word, not a slip (D10), when their keys are in a row (one tone key may come among them) and Telex dropped no key. Typed, two copies give a ^ ("chuâ"), and "caraja" ("cạa", a key dropped) stays a slip.
 
 **Result.**
-- Rules: 36 cases of D18, D62, D63, D69, D70, D71 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
+- Rules: 36 cases of D18, D63, D69, D70, D71, D73 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
 - Telex lock: 9 lines, all a word that is only the stretch: "aaa" "aaa" (was "aa"), "haaa", "ooo". The "oo" syllables ("xoong", "oõc") and "cuooocf", "moooft" are unchanged.
 - Synthetic: "cả AAA game" is now "AAA" (was "AA"): manual switches 110 → 109. Chat with typos: the three slips of D70 show one letter more ("hẹee"). Chat, metrics otherwise: unchanged.
 - Measured (scratch script, against D68): the 3000 most common Vietnamese words ending in a, e or o with two extra copies stay Vietnamese and start with the word 272 → 463 of 620 (tone before or after), 80 → 269 of 363 (tone among). 3764 English words ending in a, e or o with two extra copies in Vietnamese mode: 179 changed. 155 now show as typed ("theee", "tooo", was "thee", "too"; 9 of them now switch to English, "howeee"), 18 show one letter more as before, 2 show as typed but stay Vietnamese ("weee"), 4 names read Vietnamese (D71).
@@ -224,14 +232,6 @@ The word is remembered for look-back as not English, so English words after it d
 **Not covered.**
 - Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D64.
 - Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
-
-## 62. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
-
-**Status:** Bug fix, in review (2026-11-12).
-
-**Problem.** A word that starts with a toned vowel, followed by the Telex undo, sent a character the apps can't type: "oroo" (ỏ, ổ, then the undo), "asaa", "eree", "orww", "asww", "urww". The undo handed back the letter as a key code that still had its tone, and no key code has a tone, so the Mac app (and Driver.cpp on iPhone and Android) typed character 0 instead of "ỏ". The next key then deleted one character too many. With a consonant before the vowel ("toroo") the tone check that runs next sent the letter again correctly, which hid the bug. It shows up when people stretch a word: "ỏoooo", "áaaa".
-
-**Fix.** `insertAOE` and `insertW` send the restored letter as a character (`GET`), like every other output path. Cases tagged D62 in `rules.tsv`.
 
 ## 61. Backspace after a fixed word: the first takes the space, the second undoes
 

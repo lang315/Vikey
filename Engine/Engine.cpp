@@ -1032,7 +1032,7 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                             else hData[_index - 1 - _hatHorn[h]] = GET(TypingWord[_hatHorn[h]]);   //after the ^ letter: on screen already, sent again ("a]aa")
                         }
                 _hatPos = -1;
-                hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D62)
+                hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ổ" -> "ỏ"): a character, not a key code (D73)
                 //_index = 0;
                 if (data != KEY_O) //case thoòng
                     tempDisableKey = true;
@@ -1159,7 +1159,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
                     } else {
                         hCode = vRestore;
                         TypingWord[ii] &= ~TONEW_MASK;
-                        hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ở" -> "ỏ"), as above (D62)
+                        hData[_index - 1 - ii] = GET(TypingWord[ii]);   //may still carry a tone ("ở" -> "ỏ"), as above (D73)
                         isRestoredW = true;
                         //_index++;
                     }
