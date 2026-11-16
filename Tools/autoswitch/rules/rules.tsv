@@ -386,3 +386,13 @@ D72	1	nhesees 	nheees 	0	the same tone key again undoes the tone and switches, t
 D72	1	cuaaar 	củaaa 	1	unchanged: "cuar" is no English word, the tone goes on the syllable
 D71	1	a]aa	aưa	1	a hook given back after the ^ letter is sent again too (review: showed "aua" while the word held "aưa")
 D71	1	a]aas	aứa	1	same: the tone goes on the ư the word holds, as shown (the ư seemed to come from nowhere: "aua" + s gave "aứa")
+D62	0	ver|	ver|	0	Enter sends what's on screen: no fix at Enter (Chrome address bar: "ver" + Enter must open the highlighted vercel.com)
+D62	0	ver |	vẻ |	1	a space before Enter still fixes the word
+D62	0	ver.|	vẻ.|	1	so does a dot
+D62	0	data team lamf|	data team lamf|	0	English mode: the last word stays as typed at Enter
+D62	0	data team lamf |	data team làm |	1	a space first, then Enter
+D62	0	ddi|	ddi|	0	no conversion at Enter, even for a common Vietnamese word
+D62	1	push|	púh|	1	Vietnamese mode: no restore to English at Enter either
+D62	1	push |	push |	0	a space first, then Enter
+D62	1	discussion|	dícussion|	1	the same for a long English word
+D62	1	choeeuf|	choêù|	1	no restore-if-wrong-spelling at Enter

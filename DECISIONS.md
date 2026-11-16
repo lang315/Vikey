@@ -233,6 +233,28 @@ The word is remembered for look-back as not English, so English words after it d
 - Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D64.
 - Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
 
+## 62. Enter sends what's on screen
+
+**Status:** Shipped in 1.0.34 (Mac), 2026-11-15 (Tony's report). Windows, Linux and the phones not released yet.
+
+**Problem.** In English mode in Chrome's address bar, Tony typed "ver" and pressed Enter. Chrome was showing "vercel.com" with "cel.com" highlighted. Enter is a word end, so auto switch checked "ver", found no English word before it, and made it "vẻ". Fixing the word removed the highlighted completion, so Chrome searched Google for "vẻ" instead of opening vercel.com. "ver" is also a common word in programming (version).
+
+**Decision.** Enter never changes the word before it. What you see is what Enter sends. To get a word fixed, type a space or a dot first, then Enter. This covers every platform and both directions:
+- English mode: "data team lamf" + Enter sends "lamf". "lamf" + space gives "làm".
+- Vietnamese mode: "push" + Enter sends "púh". "push" + space gives "push".
+- The restore-if-wrong-spelling step doesn't run at Enter either.
+- Enter still ends the word, so the next word starts fresh.
+
+Options Tony didn't pick:
+- Skip the fix only when the field shows a highlighted completion (read through Accessibility). Not needed: with no fix at Enter, the completion is never touched.
+- Keep a lone "ver" English. Not needed for Enter. After a space, the fix shows on screen and ⌫⌫ undoes it (D61).
+
+**Simulator.** The corpus messages end with Enter. People who see a wrong last word type a space before Enter, so `sim.cpp` does too: when the last word isn't right, it tries a space before the Enter and counts that, not a manual switch. `--as-typed` turns this off (`driver/cmp.sh` uses it to compare the driver key for key).
+
+**Result.** Without the space model, the chat corpus would need 125 more manual switches (57 → 182). With it: manual switches 57 → 57 (chat), 70 → 70 (chat_typos), 110 → 109 (synthetic); lazy wrong words 36 → 36, 46 → 46, 63 → 62. A space before Enter is needed in 125 of 1,869 chat messages and 85 of 5,635 synthetic ones. Before, Enter fixed 127 chat messages: 70 English → Vietnamese ("lamf" → "làm"), 51 Vietnamese → English ("gôd" → "good"), 6 English spelling. Rules D62 (10 cases), `driver/undo_test` (5 cases).
+
+Live test on the Mac app: 34/34, 8 of them new Enter cases. In Chrome's address bar, "ver" with "cel.com" highlighted, then Enter: 1.0.33 searched Google for "vẻ", this build opened vercel.com. Windows, Linux and the phones run the same change; their live cases aren't updated yet.
+
 ## 61. Backspace after a fixed word: the first takes the space, the second undoes
 
 **Status:** Shipped in 1.0.33 (Mac), 2026-11-12. Tony approved it (a user's report, via Tony). Live test on the Mac app: 26/26.

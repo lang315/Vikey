@@ -15,7 +15,7 @@ U=${TMPDIR:-/tmp}/vikey_check_chat.units
 python3 sim/prep.py sim/corpus/chat_messages.txt > "$U"
 driver/undo_test || rc=1
 export DRV_OUT=${TMPDIR:-/tmp}/drv.txt
-driver/drvlazy "$U" --start vi >/dev/null; sim/sim "$U" --start vi --lazy --dump ${TMPDIR:-/tmp}/simdump.txt >/dev/null
+driver/drvlazy "$U" --start vi >/dev/null; sim/sim "$U" --start vi --lazy --as-typed --dump ${TMPDIR:-/tmp}/simdump.txt >/dev/null
 python3 - <<'PY' && echo "driver == simulator: ok" || { echo "FAIL driver output differs from the simulator"; rc=1; }
 import os, re
 t = os.environ.get('TMPDIR', '/tmp').rstrip('/')

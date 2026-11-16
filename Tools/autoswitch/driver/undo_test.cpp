@@ -1,13 +1,13 @@
 // Backspace-undo then typing on (D32): the word put back is the current word again.
 // Also: a switch or a click starts fresh, Backspace doesn't reopen a word typed before it.
-// usage: undo_test   (exit 1 on a failure)   keys: '<' Backspace, '|' VI/EN switch, '!' click (Mac, Windows, Linux)
+// usage: undo_test   (exit 1 on a failure)   keys: '<' Backspace, '|' VI/EN switch, '!' click (Mac, Windows, Linux), '\n' Enter
 #include "Driver.h"
 #include <cstdio>
 #include <string>
 int vLanguage = 1, vSwitchKeyStatus = 0, vCheckSpelling = 1, vUseModernOrthography = 1, vRestoreIfWrongSpelling = 1,
     vFixRecommendBrowser = 1, vUseSmartSwitchKey = 1, vOtherLanguage = 1, vAutoSwitchByTyping = 1;
 static Uint16 K(char c) { static const Uint16 L[26] = {KEY_A,KEY_B,KEY_C,KEY_D,KEY_E,KEY_F,KEY_G,KEY_H,KEY_I,KEY_J,KEY_K,KEY_L,KEY_M,KEY_N,KEY_O,KEY_P,KEY_Q,KEY_R,KEY_S,KEY_T,KEY_U,KEY_V,KEY_W,KEY_X,KEY_Y,KEY_Z};
-    return c == ' ' ? KEY_SPACE : c == '<' ? KEY_DELETE : c == ',' ? KEY_COMMA : c == '.' ? KEY_DOT : L[c - 'a']; }
+    return c == ' ' ? KEY_SPACE : c == '\n' ? KEY_RETURN : c == '<' ? KEY_DELETE : c == ',' ? KEY_COMMA : c == '.' ? KEY_DOT : L[c - 'a']; }
 static std::string type(const char* keys) {
     VikeyDriver d; vLanguage = 1; d.resetContext(); std::u16string t;
     for (const char* p = keys; *p; p++) {
@@ -29,6 +29,11 @@ int main() {
         {"dessert <<", "desert", "Undo the doubled-key repair"},
         {"merge <,", "merge,", "Vietnamese mode, English word: Backspace to add a comma keeps the English (Tony 2026-11-12)"},
         {"merge <<", "mẻge", "second Backspace puts the Vietnamese back"},
+        {"push\n", "púh\n", "Enter sends what's on screen: no fix at Enter (D62, Tony 2026-11-15)"},
+        {"push \n", "push \n", "a space before Enter still fixes"},
+        {"booj source vaay\n", "bộ source vaay\n", "English mode: no fix at Enter either"},
+        {"booj source vaay \n", "bộ source vây \n", "space first, then Enter"},
+        {"booj source vaay.\n", "bộ source vây.\n", "or a dot"},
         {"Sapa ", "Sapa ", "restore an unlisted multi-syllable literal"},
         {"Sapa <", "Sapa", "first Backspace: only the space goes"},
         {"Sapa <,", "Sapa,", "Backspace to add a comma keeps the English word"},
