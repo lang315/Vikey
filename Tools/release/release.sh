@@ -15,6 +15,15 @@ KCP=$(grep "^KC_PASS=" ~/.secrets/s10w_signing | cut -d= -f2-)
 IDENT="Developer ID Application: Typing Technology Company Limited (3H6967F79Y)"
 NOTARY=(--key ~/.secrets/AuthKey_3QNAF6H8AT.p8 --key-id 3QNAF6H8AT --issuer 6587ae6d-4945-468e-8879-d58b7a6d33ad)
 
+notarize() {   # submit, wait, and stop unless Apple accepted it (a pipe to tail hid the status before)
+  local out; out=$(xcrun notarytool submit "$1" "${NOTARY[@]}" --wait 2>&1) || true
+  echo "$out" | grep -q "status: Accepted" || { echo "$out" | tail -5; echo "notarization failed: $1"; exit 1; }
+  echo "notarized $(basename "$1")"
+}
+staple() {   # the ticket can take a minute to reach Apple after "Accepted" (1.0.34 shipped unstapled: Error 68)
+  for i in 1 2 3 4 5 6 7 8 9 10; do xcrun stapler staple "$1" >/dev/null 2>&1 && { echo "stapled $(basename "$1")"; return 0; }; sleep 15; done
+  echo "staple failed: $1"; exit 1
+}
 echo "==> version $VER"
 # the site is in Vietnamese and English (D31): both changelogs need this release
 for f in site/pages/changelog.html site/pages_en/changelog.html; do
@@ -47,8 +56,8 @@ codesign --force --options runtime --timestamp -s "$IDENT" dist/Vikey.app/Conten
 codesign --force --options runtime --timestamp --entitlements App/Vikey.entitlements -s "$IDENT" dist/Vikey.app
 codesign --verify --deep --strict dist/Vikey.app
 ditto -c -k --keepParent dist/Vikey.app dist/Vikey.zip
-xcrun notarytool submit dist/Vikey.zip "${NOTARY[@]}" --wait | tail -1
-xcrun stapler staple dist/Vikey.app | tail -1
+notarize dist/Vikey.zip
+staple dist/Vikey.app
 rm dist/Vikey.zip
 
 echo "==> DMG"
@@ -60,8 +69,8 @@ create-dmg --volname "Vikey" --volicon design/Vikey.icns \
   --hide-extension "Vikey.app" --no-internet-enable \
   --codesign "$IDENT" "$DMG" dist/Vikey.app >/dev/null || true
 [ -f "$DMG" ] || { echo "dmg not created"; exit 1; }
-xcrun notarytool submit "$DMG" "${NOTARY[@]}" --wait | tail -1
-xcrun stapler staple "$DMG" | tail -1
+notarize "$DMG"
+staple "$DMG"
 spctl -a -vv -t open --context context:primary-signature "$DMG" 2>&1 | tail -1
 
 echo "==> site + GitHub release"

@@ -488,13 +488,15 @@ static bool HandleEnglishKeyForAutoSwitch() {
     }
     bool wordEnd = _keycode == KEY_SPACE || _keycode == KEY_COMMA || _keycode == KEY_DOT || _keycode == KEY_SEMICOLON || _keycode == KEY_RETURN || _keycode == KEY_ENTER ||
                    (shift && (_keycode == KEY_SLASH || _keycode == KEY_1 || _keycode == KEY_QUOTE || _keycode == KEY_0));
+    // Enter sends what's on screen (D62): it ends the word but never fixes it; a word to fix gets a space or . first
+    bool fixAt = wordEnd && _keycode != KEY_RETURN && _keycode != KEY_ENTER;
     int count = _enCount; bool valid = _enValid; bool afterDouble = _enAfterDouble; _enAfterDouble = false;
-    if (afterDouble && wordEnd && vAutoSwitchFixDoubledKey(_enKeys, count)) {
+    if (afterDouble && fixAt && vAutoSwitchFixDoubledKey(_enKeys, count)) {
         StartEnglishWord(IsWordStartKey(_keycode, shift)); _enPrevN = 0;
         int correctedCount = pData->newCharCount; SendEngineOutput(); RememberAutoFix(correctedCount); return true;
     }
     StartEnglishWord(IsWordStartKey(_keycode, shift));
-    bool checked = wordEnd && valid && count >= 2 && !(vOtherLanguage && _otherInputLanguage);
+    bool checked = fixAt && valid && count >= 2 && !(vOtherLanguage && _otherInputLanguage);
     if (_undoneCount > 0) {   // the word just put back by Backspace, finished unchanged: keep it as typed (D32)
         if (count == _undoneCount && !memcmp(_enKeys, _undoneKeys, count * sizeof(Uint32))) checked = false;
         if (wordEnd) _undoneCount = 0;

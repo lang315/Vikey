@@ -5,6 +5,14 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 73. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
+
+**Status:** Bug fix, in review (2026-11-12). Numbered D62 until the sync with upstream 1.0.34, which has its own D62 (Enter sends what's on screen).
+
+**Problem.** A word that starts with a toned vowel, followed by the Telex undo, sent a character the apps can't type: "oroo" (ỏ, ổ, then the undo), "asaa", "eree", "orww", "asww", "urww". The undo handed back the letter as a key code that still had its tone, and no key code has a tone, so the Mac app (and Driver.cpp on iPhone and Android) typed character 0 instead of "ỏ". The next key then deleted one character too many. With a consonant before the vowel ("toroo") the tone check that runs next sent the letter again correctly, which hid the bug. It shows up when people stretch a word: "ỏoooo", "áaaa".
+
+**Fix.** `insertAOE` and `insertW` send the restored letter as a character (`GET`), like every other output path. Cases tagged D73 in `rules.tsv`.
+
 ## 72. A stretch of a / e / o shows every key: "chưaaa", "củaaa", "nhéee"
 
 **Status:** Done in the engine, in review (2026-11-13).
@@ -20,7 +28,7 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 - Backspace in a stretch leaves two copies ("chưaaa" ⌫ is "chưaa"): still a stretch at the end of the word, not a slip (D10), when their keys are in a row (one tone key may come among them) and Telex dropped no key. Typed, two copies give a ^ ("chuâ"), and "caraja" ("cạa", a key dropped) stays a slip.
 
 **Result.**
-- Rules: 36 cases of D18, D62, D63, D69, D70, D71 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
+- Rules: 36 cases of D18, D63, D69, D70, D71, D73 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
 - Telex lock: 9 lines, all a word that is only the stretch: "aaa" "aaa" (was "aa"), "haaa", "ooo". The "oo" syllables ("xoong", "oõc") and "cuooocf", "moooft" are unchanged.
 - Synthetic: "cả AAA game" is now "AAA" (was "AA"): manual switches 110 → 109. Chat with typos: the three slips of D70 show one letter more ("hẹee"). Chat, metrics otherwise: unchanged.
 - Measured (scratch script, against D68): the 3000 most common Vietnamese words ending in a, e or o with two extra copies stay Vietnamese and start with the word 272 → 463 of 620 (tone before or after), 80 → 269 of 363 (tone among). 3764 English words ending in a, e or o with two extra copies in Vietnamese mode: 179 changed. 155 now show as typed ("theee", "tooo", was "thee", "too"; 9 of them now switch to English, "howeee"), 18 show one letter more as before, 2 show as typed but stay Vietnamese ("weee"), 4 names read Vietnamese (D71).
@@ -225,13 +233,27 @@ The word is remembered for look-back as not English, so English words after it d
 - Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D64.
 - Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
 
-## 62. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
+## 62. Enter sends what's on screen
 
-**Status:** Bug fix, in review (2026-11-12).
+**Status:** Shipped in 1.0.34 (Mac), 2026-11-15 (Tony's report). Windows, Linux and the phones not released yet.
 
-**Problem.** A word that starts with a toned vowel, followed by the Telex undo, sent a character the apps can't type: "oroo" (ỏ, ổ, then the undo), "asaa", "eree", "orww", "asww", "urww". The undo handed back the letter as a key code that still had its tone, and no key code has a tone, so the Mac app (and Driver.cpp on iPhone and Android) typed character 0 instead of "ỏ". The next key then deleted one character too many. With a consonant before the vowel ("toroo") the tone check that runs next sent the letter again correctly, which hid the bug. It shows up when people stretch a word: "ỏoooo", "áaaa".
+**Problem.** In English mode in Chrome's address bar, Tony typed "ver" and pressed Enter. Chrome was showing "vercel.com" with "cel.com" highlighted. Enter is a word end, so auto switch checked "ver", found no English word before it, and made it "vẻ". Fixing the word removed the highlighted completion, so Chrome searched Google for "vẻ" instead of opening vercel.com. "ver" is also a common word in programming (version).
 
-**Fix.** `insertAOE` and `insertW` send the restored letter as a character (`GET`), like every other output path. Cases tagged D62 in `rules.tsv`.
+**Decision.** Enter never changes the word before it. What you see is what Enter sends. To get a word fixed, type a space or a dot first, then Enter. This covers every platform and both directions:
+- English mode: "data team lamf" + Enter sends "lamf". "lamf" + space gives "làm".
+- Vietnamese mode: "push" + Enter sends "púh". "push" + space gives "push".
+- The restore-if-wrong-spelling step doesn't run at Enter either.
+- Enter still ends the word, so the next word starts fresh.
+
+Options Tony didn't pick:
+- Skip the fix only when the field shows a highlighted completion (read through Accessibility). Not needed: with no fix at Enter, the completion is never touched.
+- Keep a lone "ver" English. Not needed for Enter. After a space, the fix shows on screen and ⌫⌫ undoes it (D61).
+
+**Simulator.** The corpus messages end with Enter. People who see a wrong last word type a space before Enter, so `sim.cpp` does too: when the last word isn't right, it tries a space before the Enter and counts that, not a manual switch. `--as-typed` turns this off (`driver/cmp.sh` uses it to compare the driver key for key).
+
+**Result.** Without the space model, the chat corpus would need 125 more manual switches (57 → 182). With it: manual switches 57 → 57 (chat), 70 → 70 (chat_typos), 110 → 109 (synthetic); lazy wrong words 36 → 36, 46 → 46, 63 → 62. A space before Enter is needed in 125 of 1,869 chat messages and 85 of 5,635 synthetic ones. Before, Enter fixed 127 chat messages: 70 English → Vietnamese ("lamf" → "làm"), 51 Vietnamese → English ("gôd" → "good"), 6 English spelling. Rules D62 (10 cases), `driver/undo_test` (5 cases).
+
+Live test on the Mac app: 34/34, 8 of them new Enter cases. In Chrome's address bar, "ver" with "cel.com" highlighted, then Enter: 1.0.33 searched Google for "vẻ", this build opened vercel.com. Windows, Linux and the phones run the same change; their live cases aren't updated yet.
 
 ## 61. Backspace after a fixed word: the first takes the space, the second undoes
 
