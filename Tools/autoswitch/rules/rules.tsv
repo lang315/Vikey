@@ -240,3 +240,5 @@ D69	1	test test 	test test 	0	so does "test"
 D69	0	his his 	his his 	0	typed in English mode: stays as typed
 D69	1	his his {}his 	hí hí hí 	1	← → back to the same spot: the word after still repeats (like the look-back words, D51)
 D69	1	his his {his 	hí hí his 	0	typed after moving away (← only): no repeat, "his" is English again
+D69	1	his his <,	hí hí,	1	Backspace over the space and a comma: the repeated word stays Vietnamese
+D69	1	his his <<<<<<his 	his 	0	Backspace through both words: a lone "his" is English again

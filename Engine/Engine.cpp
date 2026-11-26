@@ -2292,6 +2292,8 @@ void vKeyHandleEvent(const vKeyEvent& event,
         _asWordStartOk = true;
     } else if (data == KEY_DELETE) {
         _asPrevCount = 0;
+        //D69: Backspace into the repeated word: it may be gone (over the space after it, it's the current word again)
+        if (!_specialChar.empty() || _spaceCount == 0) _asRepeatN = 0;
         hCode = vDoNothing;
         hExt = 2; //delete
         if (_specialChar.size() > 0) {
