@@ -7,7 +7,7 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 
 ## 69. A word typed twice: "hí hí" stays Vietnamese
 
-**Status:** Agreed (2026-11-26): a bug fix (a user's report, via Tony).
+**Status:** Agreed (2026-11-26): a bug fix (a user's report, via Tony), in PR #146.
 
 **Problem.** In Vietnamese mode, "his his " gave "his his " and switched to English. The user meant "hí hí", a laugh. "hí" is rare in the word lists (about 8 per million, just below the Vietnamese floor, `AS_VN_FLOOR`), and "his" is very common, so the first word goes English. The second "his" is then typed in English mode and stays English.
 
