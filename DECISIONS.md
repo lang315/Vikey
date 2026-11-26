@@ -14,9 +14,11 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 **Fix.** English rarely types the same word twice. Vietnamese often does ("hí hí", "hé hé"). The word-pair data (D30) says how often real text doubles each reading.
 - English mode, right after auto switch put a word back to English: the same keys again go Vietnamese, both words, when real text doubles the Vietnamese reading at least 10x more often than the English one. "hí hí" 117 vs "his his" 10; "hé hé" 35 vs 0.
 - Vietnamese mode: the same keys right after a word that stayed Vietnamese, or that auto switch just turned Vietnamese, stay Vietnamese. So "hí hí hí" stays.
+- The pair counts are compared as they are (117 ≥ 10 × 10), without smoothing.
+- After the cursor moves away (←), a word typed there doesn't repeat the one before. Back at the same spot (← →), it still does, like the look-back words (D51).
 - Not changed: "his" alone is still English. "yes yes", "test test", "is is", "how how" stay English: real text doubles the English word more.
 
-**Result.** Typing each of the 8,000 most common English words twice in Vietnamese mode: 4 change ("hí hí", "hé hé", "kên kên", "tóp tóp"). Goldens, metrics and realistic typing unchanged. Rules D69 (8 cases), reported bug R22, `driver/undo_test` (3 cases).
+**Result.** Typing each of the 8,000 most common English words twice in Vietnamese mode: 4 change ("hí hí", "hé hé", "kên kên", "tóp tóp"). Goldens, metrics and realistic typing unchanged. Rules D69 (10 cases), reported bug R22, `driver/undo_test` (3 cases).
 
 ## 68. Frequently Used emoji: kept without Full Access, ranked like Apple's (iOS, Mac)
 

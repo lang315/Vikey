@@ -1601,22 +1601,19 @@ static int asNextPairVote(const char* prevLetters, const char* nextLetters) {
 }
 
 #ifndef AS_REPEAT
-#define AS_REPEAT 10   //how much more common (10x) the doubled Vietnamese word must be than the doubled English one (D69)
+#define AS_REPEAT 10   //how many times more often real text must double the Vietnamese reading than the English one (D69)
 #endif
-/** D69: a word typed twice. > 0 when real text doubles the Vietnamese reading ("hí hí", "hé hé") more often than
- *  the English one ("his his"); 0 without data. */
-static int asRepeatVote(const char* letters) {
-    if (_asBigramWeight <= 0) return 0;
+/** D69: a word typed twice. Real text doubles the Vietnamese reading ("hí hí" 117, "hé hé" 35) at least AS_REPEAT
+ *  times as often as the English one ("his his" 10); false without data. */
+static bool asRepeatIsVietnamese(const char* letters) {
+    if (_asBigramWeight <= 0) return false;
     std::string vn, en = letters;
-    if (!asSurface(letters, true, vn)) return 0;
+    if (!asSurface(letters, true, vn)) return false;
     auto get = [&](const std::string& key) {
         if (!_asBigrams) return asBuiltInPair(key);
         auto it = _asBigrams->find(key); return it == _asBigrams->end() ? 0 : it->second; };
     int cv = get(vn + "\t" + vn), ce = get(en + "\t" + en);
-    if (cv + ce < _asBigramMin) return 0;
-    double v = 10 * log10((cv + 0.5) / (ce + 0.5));
-    if (v > 30) v = 30; if (v < -30) v = -30;
-    return (int)lround(v);
+    return cv + ce >= _asBigramMin && cv >= AS_REPEAT * ce;
 }
 
 static void asRememberWord() {
@@ -2083,7 +2080,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     //D69: the word auto switch just put back to English, typed again: Vietnamese, when real text doubles that word
     //("hí hí", "hé hé") much more than the English one ("his his"; "yes yes", "test test" stay)
     bool repeat = vAutoSwitchPrevRestored && previousN >= 1 && asSameLetters(keys, count, previous[0], previousCounts[0]) &&
-                  asRepeatVote(raw) >= AS_REPEAT;
+                  asRepeatIsVietnamese(raw);
     if (vn == AS_MISSING || !(repeat || en == AS_MISSING || capVote >= AS_CAP_MARGIN || (en < AS_EN_FLOOR && vn - en + pairVote >= AS_PREFER))) return false;
 #ifndef AS_CAPS_VN_FLOOR
 #define AS_CAPS_VN_FLOOR 15   //all capitals convert only to a common syllable (IRS stays, not "Í"): D23, D27
@@ -2181,6 +2178,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count) {
 static AsEngineState* _navSaved = NULL;
 static int _navOffset = 0;      //how far left of the word's end the cursor is (≤ 0)
 static int _navPrevCount = 0;  //the look-back words (they're before the word's end, not before the cursor while away)
+static int _navRepeatN = 0;    //and the word D69 repeats
 static void navForget() { if (_navSaved) { delete _navSaved; _navSaved = NULL; } _navOffset = 0; }
 
 void vKeyHandleEvent(const vKeyEvent& event,
@@ -2192,6 +2190,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (data == KEY_LEFT && _navOffset == 0 && (_index > 0 || _spaceCount > 0)) {   //in a word, or right after one
             navForget(); _navSaved = new AsEngineState(); asSaveState(*_navSaved);
             _navPrevCount = _asPrevCount; _asPrevCount = 0;   //away from the word, look-back must not reach the old words
+            _navRepeatN = _asRepeatN; _asRepeatN = 0;         //nor a word typed there repeat the one before (D69)
             //asSaveState moved the history out: the word is gone from the live state until the cursor comes back
             _navOffset = -1;
             startNewSession();
@@ -2200,7 +2199,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         }
         if (_navSaved && data == KEY_LEFT) { _navOffset--; hCode = vDoNothing; hBPC = 0; hNCC = 0; hExt = 1; return; }
         if (_navSaved && data == KEY_RIGHT) {
-            if (++_navOffset == 0) { asRestoreState(*_navSaved); delete _navSaved; _navSaved = NULL; _asPrevCount = _navPrevCount; }   //back at the word's end
+            if (++_navOffset == 0) { asRestoreState(*_navSaved); delete _navSaved; _navSaved = NULL; _asPrevCount = _navPrevCount; _asRepeatN = _navRepeatN; }   //back at the word's end
             hCode = vDoNothing; hBPC = 0; hNCC = 0; hExt = 1;
             return;
         }

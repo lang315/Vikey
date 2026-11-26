@@ -238,3 +238,5 @@ D69	1	his name 	his name 	0	once, "his" is still English
 D69	1	yes yes 	yes yes 	0	real text doubles English "yes" more: stays English
 D69	1	test test 	test test 	0	so does "test"
 D69	0	his his 	his his 	0	typed in English mode: stays as typed
+D69	1	his his {}his 	hí hí hí 	1	← → back to the same spot: the word after still repeats (like the look-back words, D51)
+D69	1	his his {his 	hí hí his 	0	typed after moving away (← only): no repeat, "his" is English again
