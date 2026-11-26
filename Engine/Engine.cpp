@@ -1320,6 +1320,8 @@ struct AsWord {
 static AsWord _asPrev[AS_LOOKBACK_WORDS];
 static int _asPrevCount = 0;
 static Uint32 _asConverted[MAX_BUFF]; static int _asConvertedN = 0;   //the word auto switch just put in Vietnamese
+//D69: the keys of that word, so the same word typed again right after it stays Vietnamese ("hí hí hí")
+static Uint32 _asRepeat[MAX_BUFF]; static int _asRepeatN = 0, _asRepeatPendingN = 0;
 static void navForget();
 
 void vAutoSwitchForget() {
@@ -1332,6 +1334,7 @@ void vAutoSwitchForget() {
         //so Backspace over that key reopens it like a word typed in Vietnamese ("treen " ⌫ + s -> "trến")
         _typingStates.push_back(vector<Uint32>(_asConverted, _asConverted + _asConvertedN)); _spaceCount = 1; _asConvertedN = 0;
     }
+    _asRepeatN = _asRepeatPendingN; _asRepeatPendingN = 0;   //only the switch right after the conversion keeps it
 }
 
 static void asInitLetters() {
@@ -1597,6 +1600,22 @@ static int asNextPairVote(const char* prevLetters, const char* nextLetters) {
     return (int)lround(v * _asBigramWeight);
 }
 
+#ifndef AS_REPEAT
+#define AS_REPEAT 10   //how many times more often real text must double the Vietnamese reading than the English one (D69)
+#endif
+/** D69: a word typed twice. Real text doubles the Vietnamese reading ("hí hí" 117, "hé hé" 35) at least AS_REPEAT
+ *  times as often as the English one ("his his" 10); false without data. */
+static bool asRepeatIsVietnamese(const char* letters) {
+    if (_asBigramWeight <= 0) return false;
+    std::string vn, en = letters;
+    if (!asSurface(letters, true, vn)) return false;
+    auto get = [&](const std::string& key) {
+        if (!_asBigrams) return asBuiltInPair(key);
+        auto it = _asBigrams->find(key); return it == _asBigrams->end() ? 0 : it->second; };
+    int cv = get(vn + "\t" + vn), ce = get(en + "\t" + en);
+    return cv + ce >= _asBigramMin && cv >= AS_REPEAT * ce;
+}
+
 static void asRememberWord() {
 #ifdef AS_NO_LOOKBACK
     _asPrevCount = 0; return;
@@ -1690,10 +1709,21 @@ static bool asHasLiteralWordShape(const Uint32* keys, int count, bool telexToneE
     return asHasInternalCapital(keys, count) || asHasSeparatedVowels(keys, count, telexToneEdits);
 }
 
+/** The same keys, capitals aside ("His his"). */
+static bool asSameLetters(const Uint32* a, const int& na, const Uint32* b, const int& nb) {
+    if (na != nb) return false;
+    for (int x = 0; x < na; x++) if ((a[x] & CHAR_MASK) != (b[x] & CHAR_MASK)) return false;
+    return true;
+}
+
 static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
     if (!asEnabled() || !_asWordStartOk) return false;
     asInitLetters();
     if (_stateIndex < 2 || _stateIndex < _index) return false;
+    //D69: the same keys as the word just before read the same way, when that one stayed Vietnamese or auto switch
+    //just turned it Vietnamese ("his his" -> "hí hí", then "hí" again)
+    if (_asRepeatN > 0 && asSameLetters(KeyStates, _stateIndex, _asRepeat, _asRepeatN)) return false;
+    if (_asPrevCount >= 1 && _asPrev[0].vn != AS_MISSING && asSameLetters(KeyStates, _stateIndex, _asPrev[0].raw, _asPrev[0].rawCount)) return false;
     char word[AS_KEY_LEN], raw[AS_KEY_LEN];
     bool transformed;
     bool wordOk = asWordKey(word, transformed);
@@ -2047,7 +2077,11 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
         capVote = asCapVote(raw);
         if (capVote <= -AS_CAP_MARGIN) return false;
     }
-    if (vn == AS_MISSING || !(en == AS_MISSING || capVote >= AS_CAP_MARGIN || (en < AS_EN_FLOOR && vn - en + pairVote >= AS_PREFER))) return false;
+    //D69: the word auto switch just put back to English, typed again: Vietnamese, when real text doubles that word
+    //("hí hí", "hé hé") much more than the English one ("his his"; "yes yes", "test test" stay)
+    bool repeat = vAutoSwitchPrevRestored && previousN >= 1 && asSameLetters(keys, count, previous[0], previousCounts[0]) &&
+                  asRepeatIsVietnamese(raw);
+    if (vn == AS_MISSING || !(repeat || en == AS_MISSING || capVote >= AS_CAP_MARGIN || (en < AS_EN_FLOOR && vn - en + pairVote >= AS_PREFER))) return false;
 #ifndef AS_CAPS_VN_FLOOR
 #define AS_CAPS_VN_FLOOR 15   //all capitals convert only to a common syllable (IRS stays, not "Í"): D23, D27
 #endif
@@ -2098,7 +2132,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
             earlierCount[back] = pc;
             for (int x = 0; x < pc; x++) earlier[back][x] = pk[x];
         } else if (pen == AS_MISSING || pvn == AS_MISSING ||
-                   (back == 0 && vAutoSwitchPrevRestored ? asNextPairVote(praw, raw) < AS_NEXT_PAIR :   //switched on purpose: only strong evidence
+                   (back == 0 && vAutoSwitchPrevRestored ? !repeat && asNextPairVote(praw, raw) < AS_NEXT_PAIR :   //switched on purpose: only strong evidence (or D69)
                     (pvn < pen - AS_LOOKBACK_MARGIN && !(back == 0 && asNextPairVote(praw, raw) >= AS_NEXT_PAIR)))) {
             break;                //only ambiguous words that were kept English follow the switch (or, D35, ones the
                                   //word after them clearly reads as Vietnamese: "em í ạ", "hết cả mood")
@@ -2122,6 +2156,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     for (int x = 0; x < resultCount; x++) out[n++] = result[x];
     for (int x = 0; x < count; x++) vAutoSwitchUndoData[vAutoSwitchUndoCount++] = keys[x];
     memcpy(_asConverted, states, resultCount * sizeof(Uint32)); _asConvertedN = resultCount;   //vAutoSwitchForget picks it up when the app switches
+    memcpy(_asRepeat, keys, count * sizeof(Uint32)); _asRepeatPendingN = count;                 //and this (D69)
 
     hCode = vRestore;          //platform sends the new text, then the break key itself
     hBPC = (Byte)deleteCount;
@@ -2143,6 +2178,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count) {
 static AsEngineState* _navSaved = NULL;
 static int _navOffset = 0;      //how far left of the word's end the cursor is (≤ 0)
 static int _navPrevCount = 0;  //the look-back words (they're before the word's end, not before the cursor while away)
+static int _navRepeatN = 0;    //and the word D69 repeats
 static void navForget() { if (_navSaved) { delete _navSaved; _navSaved = NULL; } _navOffset = 0; }
 
 void vKeyHandleEvent(const vKeyEvent& event,
@@ -2154,6 +2190,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (data == KEY_LEFT && _navOffset == 0 && (_index > 0 || _spaceCount > 0)) {   //in a word, or right after one
             navForget(); _navSaved = new AsEngineState(); asSaveState(*_navSaved);
             _navPrevCount = _asPrevCount; _asPrevCount = 0;   //away from the word, look-back must not reach the old words
+            _navRepeatN = _asRepeatN; _asRepeatN = 0;         //nor a word typed there repeat the one before (D69)
             //asSaveState moved the history out: the word is gone from the live state until the cursor comes back
             _navOffset = -1;
             startNewSession();
@@ -2162,7 +2199,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         }
         if (_navSaved && data == KEY_LEFT) { _navOffset--; hCode = vDoNothing; hBPC = 0; hNCC = 0; hExt = 1; return; }
         if (_navSaved && data == KEY_RIGHT) {
-            if (++_navOffset == 0) { asRestoreState(*_navSaved); delete _navSaved; _navSaved = NULL; _asPrevCount = _navPrevCount; }   //back at the word's end
+            if (++_navOffset == 0) { asRestoreState(*_navSaved); delete _navSaved; _navSaved = NULL; _asPrevCount = _navPrevCount; _asRepeatN = _navRepeatN; }   //back at the word's end
             hCode = vDoNothing; hBPC = 0; hNCC = 0; hExt = 1;
             return;
         }
@@ -2216,6 +2253,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             vCheckSpelling = _useSpellCheckingBefore;
         }
         _asPrevCount = 0;
+        _asRepeatN = 0;
         //the next word is a whole word only after whitespace, a click, a shortcut or an opening ( [ { " ',
         //not after . _ - / etc.
         _afterDigit = IS_NUMBER_KEY(data) && capsStatus != 1;
@@ -2241,6 +2279,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         //look-back memory: only words separated by a single space count. A word put back as typed ("tooib") isn't
         //remembered, so it ends the history: else look-back takes the word before it as adjacent ("thí tothis makes")
         if (hCode == vDoNothing && _spaceCount == 1) asRememberWord(); else _asPrevCount = 0;
+        _asRepeatN = 0;   //D69: only the word right after the conversion
         //save word
         if (_spaceCount == 1) {
             if (_specialChar.size() > 0) {
@@ -2253,6 +2292,8 @@ void vKeyHandleEvent(const vKeyEvent& event,
         _asWordStartOk = true;
     } else if (data == KEY_DELETE) {
         _asPrevCount = 0;
+        //D69: Backspace into the repeated word: it may be gone (over the space after it, it's the current word again)
+        if (!_specialChar.empty() || _spaceCount == 0) _asRepeatN = 0;
         hCode = vDoNothing;
         hExt = 2; //delete
         if (_specialChar.size() > 0) {
