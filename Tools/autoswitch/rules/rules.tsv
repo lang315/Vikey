@@ -230,3 +230,11 @@ D62	1	push|	púh|	1	Vietnamese mode: no restore to English at Enter either
 D62	1	push |	push |	0	a space first, then Enter
 D62	1	discussion|	dícussion|	1	the same for a long English word
 D62	1	choeeuf|	choêù|	1	no restore-if-wrong-spelling at Enter
+D69	1	his his 	hí hí 	1	a word typed twice: real text doubles "hí" ~11x more than "his", so both go Vietnamese
+D69	1	his his his 	hí hí hí 	1	the same word again right after stays Vietnamese
+D69	1	hes hes 	hé hé 	1	the other laugh
+D69	1	em his his nhes 	em hí hí nhé 	1	in a sentence
+D69	1	his name 	his name 	0	once, "his" is still English
+D69	1	yes yes 	yes yes 	0	real text doubles English "yes" more: stays English
+D69	1	test test 	test test 	0	so does "test"
+D69	0	his his 	his his 	0	typed in English mode: stays as typed

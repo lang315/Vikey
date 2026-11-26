@@ -51,6 +51,9 @@ int main() {
         {"booj source vaay < ", "bộ source vây ", "space again: the fix stays"},
         {"xin |hello|<s", "xin hells", "after a switch Backspace doesn't reopen xin (was xin heín)"},
         {"heelo!vieejt", "hêloviệt", "a click on a word put back to its keys: the next word gets Telex (was vieejt)"},
+        {"his his ", "hí hí ", "a word typed twice is Vietnamese when real text doubles it (D69)"},
+        {"his his his ", "hí hí hí ", "and again (D69)"},
+        {"his his <,", "hí hí,", "Backspace to add a comma keeps both (D69)"},
     };
     int fails = 0;
     for (auto& c : cases) { std::string got = type(c.keys); if (got != c.want) { fails++; printf("FAIL: '%s' -> '%s', want '%s' (%s)\n", c.keys, got.c_str(), c.want, c.why); } }

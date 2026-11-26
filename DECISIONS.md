@@ -5,6 +5,19 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 69. A word typed twice: "hí hí" stays Vietnamese
+
+**Status:** Agreed (2026-11-26): a bug fix (a user's report, via Tony).
+
+**Problem.** In Vietnamese mode, "his his " gave "his his " and switched to English. The user meant "hí hí", a laugh. "hí" is rare in the word lists (about 8 per million, just below the Vietnamese floor, `AS_VN_FLOOR`), and "his" is very common, so the first word goes English. The second "his" is then typed in English mode and stays English.
+
+**Fix.** English rarely types the same word twice. Vietnamese often does ("hí hí", "hé hé"). The word-pair data (D30) says how often real text doubles each reading.
+- English mode, right after auto switch put a word back to English: the same keys again go Vietnamese, both words, when real text doubles the Vietnamese reading at least 10x more often than the English one. "hí hí" 117 vs "his his" 10; "hé hé" 35 vs 0.
+- Vietnamese mode: the same keys right after a word that stayed Vietnamese, or that auto switch just turned Vietnamese, stay Vietnamese. So "hí hí hí" stays.
+- Not changed: "his" alone is still English. "yes yes", "test test", "is is", "how how" stay English: real text doubles the English word more.
+
+**Result.** Typing each of the 8,000 most common English words twice in Vietnamese mode: 4 change ("hí hí", "hé hé", "kên kên", "tóp tóp"). Goldens, metrics and realistic typing unchanged. Rules D69 (8 cases), reported bug R22, `driver/undo_test` (3 cases).
+
 ## 68. Frequently Used emoji: kept without Full Access, ranked like Apple's (iOS, Mac)
 
 **Status:** Agreed (built), 2026-11-21 (Tony: "My wife is saying that vikey doesn't remember the 💖 emoji she used frequently. Can you check for bugs? Ideally our "frequently" definition should be the same as the default keyboard").
