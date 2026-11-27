@@ -153,10 +153,12 @@ extern "C" {
     static bool _enPrevRestored = false;   // _enPrevKeys[0] was put back to English by auto switch (D35)
 
     /// Starts a new English-mode word; the previous words stay for look-back.
+    static bool _enAfterOpenBracket = false;   // the current English word began right after a [: its ] closes it (D75)
     static void StartEnglishWord(bool valid) {
         _enCount = 0;
         _enValid = valid;
         _enAfterShortcut = false;
+        _enAfterOpenBracket = false;
     }
 
     /// Starts over: no current word and nothing to look back on.
@@ -1067,7 +1069,8 @@ extern "C" {
         }
         _enNavOffset = 0;
         // Telex [ ] inside a word are ơ / ư: part of the word, so "m[is" can still become "mới" (D75)
-        bool bracketVowel = vTelexStyle == 0 && !shift && _enCount > 0 && (_keycode == KEY_LEFT_BRACKET || _keycode == KEY_RIGHT_BRACKET);
+        bool bracketVowel = vTelexStyle == 0 && !shift && _enCount > 0 &&
+                            (_keycode == KEY_LEFT_BRACKET || (_keycode == KEY_RIGHT_BRACKET && !_enAfterOpenBracket));
         if (IsLetterKey(_keycode) || bracketVowel) {
             if (_enCount < MAX_BUFF - 2) _enKeys[_enCount++] = _keycode | (caps ? CAPS_MASK : 0);
             else _enValid = false;
@@ -1105,6 +1108,7 @@ extern "C" {
         }
         // the next word is whole only after whitespace; after . _ - / ( etc. it's part of an identifier or path
         StartEnglishWord(IsWordStartKey(_keycode, shift));
+        _enAfterOpenBracket = _keycode == KEY_LEFT_BRACKET && !shift;
         bool checked = fixAt && valid && count >= 2 && !(vOtherLanguage && OtherInputSourceActive());
         if (_undoneCount > 0) {   // the word just put back by Backspace, finished unchanged: keep it as typed
             if (count == _undoneCount && !memcmp(_enKeys, _undoneKeys, count * sizeof(Uint32))) checked = false;

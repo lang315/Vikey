@@ -2330,6 +2330,14 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     int resultCount;
     Uint32 states[MAX_BUFF];   //the engine's own form of the result, for Backspace after the switch
     int vn = asReplay(keys, count, result, resultCount, NULL, states);
+    //every [ ] must have made an ơ / ư: one the engine kept as a bracket starts a new word, and the replay is only
+    //that word's end ("list[s]" gives "sư", D75)
+    if (brackets && vn != AS_MISSING) {
+        int typed = 0, made = 0;
+        for (int x = 0; x < count; x++) if (!asLetterOf(keys[x])) typed++;
+        for (int x = 0; x < resultCount; x++) if (states[x] & BRACKET_MASK) made++;
+        if (made != typed) return false;
+    }
     //word pairs (D30): "cho con bus" -> bú, "the bus" stays
     int pairVote = 0;
     if ((_asBigramWeight > 0 || _asTrigrams) && en != AS_MISSING && vn != AS_MISSING && previousN >= 1 && previousCounts[0] >= 1) {
