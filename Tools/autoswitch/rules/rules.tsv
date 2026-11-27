@@ -403,4 +403,7 @@ D74	1	dodo 	dodo 	1	the d after the vowels no longer puts đ on the first letter
 D74	1	ddi 	đi 	1	dd typed together still makes đ
 D74	1	Ddi 	Đi 	1	same with Shift on the first d
 D74	1	dddi 	ddi 	1	a third d still undoes the đ
-D74	1	ddid 	đid 	1	a later d no longer undoes the đ either (was "did")
+D74	1	ddid 	did 	1	a later d in a word with đ still undoes it (review: was "đid")
+D74	1	dieenjd 	điện 	1	a d at the end of a word with a Vietnamese mark still makes đ (review: was "dieenjd")
+D74	1	duowcjd 	được 	1	same with ươ
+D74	1	difd 	đì 	1	same with only a tone

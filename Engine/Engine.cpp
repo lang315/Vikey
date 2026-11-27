@@ -1272,8 +1272,11 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
         isCorect = false;
         isChanged = false;
         k = _index;
-        //only dd typed together makes đ: a d later in the word ("did", "dad") is a letter, not "đi", "đa" (D74)
-        for (i = 0; _index > 0 && CHR(_index - 1) == KEY_D && i < _consonantD.size(); i++) {
+        //a d makes đ right after the d, or in a word that already has a mark or a đ ("dieenjd" is "điện", "ddid"
+        //undoes the đ); in a plain word it is a letter: "did", "dad", not "đi", "đa" (D74)
+        bool strokeD = _index > 0 && CHR(_index - 1) == KEY_D;
+        for (int x = 0; !strokeD && x < _index; x++) if (TypingWord[x] & (TONE_MASK | TONEW_MASK | MARK_MASK)) strokeD = true;
+        for (i = 0; strokeD && i < _consonantD.size(); i++) {
             if (_index < _consonantD[i].size())
                 continue;
             isCorect = true;
