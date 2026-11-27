@@ -396,6 +396,17 @@ D62	1	push|	púh|	1	Vietnamese mode: no restore to English at Enter either
 D62	1	push |	push |	0	a space first, then Enter
 D62	1	discussion|	dícussion|	1	the same for a long English word
 D62	1	choeeuf|	choêù|	1	no restore-if-wrong-spelling at Enter
+D74	1	dad 	dad 	1	a d later in the word is a letter: only dd typed together makes đ (was "đa")
+D74	1	Dad just called 	Dad just called 	1	same with a capital (was "Đa just called")
+D74	1	did you refresh the page 	did you refresh the page 	0	in an English sentence (was "đi you refresh the page")
+D74	1	dodo 	dodo 	1	the d after the vowels no longer puts đ on the first letter (was "đô")
+D74	1	ddi 	đi 	1	dd typed together still makes đ
+D74	1	Ddi 	Đi 	1	same with Shift on the first d
+D74	1	dddi 	ddi 	1	a third d still undoes the đ
+D74	1	ddid 	did 	1	a later d in a word with đ still undoes it (review: was "đid")
+D74	1	dieenjd 	điện 	1	a d at the end of a word with a Vietnamese mark still makes đ (review: was "dieenjd")
+D74	1	duowcjd 	được 	1	same with ươ
+D74	1	difd 	đì 	1	same with only a tone
 D75	1	verrsion m[is nhaats 	version mới nhất 	1	the user's report: after an English word, an ơ typed with [ ("m[is") stayed "m[is"
 D75	0	m[is 	mới 	1	English mode: [ after a letter is ơ, as with w ("mowis")
 D75	0	b[i 	bơi 	1	same as "bowi" (D65 kept "b[i" as typed)

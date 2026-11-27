@@ -27,6 +27,30 @@ Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i
 **Not covered.**
 - Any word with [ ] inside that replays to a syllable converts, even where it was meant as a bracket: "m[ " is "mơ", "h[i " is "hơi" in English mode, as in Vietnamese mode.
 - Windows, Linux, iPhone and Android keep [ ] as brackets in English mode.
+## 74. A d later in a plain word stays d: "did" stays "did", not "đi"
+
+**Status:** Bug fix, in review (2026-11-27).
+
+**Problem.** The user's report: pressing d sometimes turns a d into đ. In a word that starts with d, a d typed anywhere later put the stroke on the first letter, as in OpenKey: "did" gave "đi", "dad" "đa", "Dad" "Đa", "dodo" "đô", "dand" "đan". These are real syllables, so the auto switch kept them in Vietnamese (D18 counted did/đi as a tie). In chat, "Dad just called" came out as "Đa just called" and "Did anyone…" as "Đi anyone…".
+
+**Fix.** The d key makes đ right after the d, or in a word that already has a mark (^, ˘, horn, tone) or a đ (`handleMainKey`, D branch), so every platform gets it. In a plain word ("did", "dad", "dodo") a later d is a letter. Cases tagged D74 in `rules.tsv`.
+- "ddi" is still "đi", "Ddi" "Đi", and a third d still undoes the stroke ("dddi" is "ddi").
+- A d at the end still works in a word with a mark: "dieenjd" is "điện", "duowcjd" "được", "difd" "đì"; and a later d still undoes a đ: "ddid" is "did". Found in review: the first version (only dd together) gave "dieenjd" (put back to its keys) and "đid".
+
+**Result.**
+- Rules: all pass, the 11 D74 cases added.
+- Measured (scratch script, against D73): the 1311 words of `en_50k.txt` with two or more d, lowercase and capitalized (2622), typed in Vietnamese mode. 134 changed, all 134 now show as typed. 24 had a đ ("did" "đi", "dad" "đa", "dodo" "đô"), 110 showed as typed already but now stay in Vietnamese mode ("dude", "died", "daddy", "didnt", "dodge"). Words that pick up a mark before their second d still get đ, as before: "deed" "đê", "defend" "đền", "defused" "đếu".
+- `test/bulk.py`: English words typed in Vietnamese mode still wrong after space 317 → 310 of 20000 (3.38% → 3.04% of usage); English words wrongly converted in English mode 89 → 86; Vietnamese numbers unchanged.
+- Chat corpus (with and without typos) and synthetic corpus: "Dad", "Did" and "did" in English sentences now come out as typed. Manual switches 57 → 54 (chat), 67 → 64 (chat with typos), 108 → 107 (synthetic); wrong words unchanged.
+- Chat with typos: unchanged apart from the lines above (the slip "ddeed", meant "ddeef", still shows "ddee", as before).
+- Telex lock: unchanged (11092 lines).
+- Stretch lock: "dadaaa" and "dodooo" show as typed (were "đaaa", "đooo").
+- Realistic typing (`rules/golden/rtsim.json`): words fixed by hand after a typo 561 → 557, after Backspace into the word 424 → 422.
+
+**Not covered.**
+- People who typed the d at the end of a plain syllable ("did" for "đi", "dongd" for "đong") must now type "ddi"; with a mark on the word it still works.
+- English words that pick up a Telex mark before their second d still get đ ("deed" "đê", "defend" "đền"), as before D74.
+- English words with a second d that Telex leaves alone ("dude", "dodge", "deduct", "dedicate", "dudeee") no longer switch to English: the switch came from the đ it had to take back. They stay in Vietnamese mode with the right text, like "dead" and "added".
 
 ## 73. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
 
