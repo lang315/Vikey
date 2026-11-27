@@ -1066,7 +1066,9 @@ extern "C" {
             }
         }
         _enNavOffset = 0;
-        if (IsLetterKey(_keycode)) {
+        // Telex [ ] inside a word are ơ / ư: part of the word, so "m[is" can still become "mới" (D75)
+        bool bracketVowel = vTelexStyle == 0 && !shift && _enCount > 0 && (_keycode == KEY_LEFT_BRACKET || _keycode == KEY_RIGHT_BRACKET);
+        if (IsLetterKey(_keycode) || bracketVowel) {
             if (_enCount < MAX_BUFF - 2) _enKeys[_enCount++] = _keycode | (caps ? CAPS_MASK : 0);
             else _enValid = false;
             _enAfterShortcut = false;

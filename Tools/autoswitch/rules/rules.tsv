@@ -396,3 +396,10 @@ D62	1	push|	púh|	1	Vietnamese mode: no restore to English at Enter either
 D62	1	push |	push |	0	a space first, then Enter
 D62	1	discussion|	dícussion|	1	the same for a long English word
 D62	1	choeeuf|	choêù|	1	no restore-if-wrong-spelling at Enter
+D75	1	verrsion m[is nhaats 	version mới nhất 	1	the user's report: after an English word, an ơ typed with [ ("m[is") stayed "m[is"
+D75	0	m[is 	mới 	1	English mode: [ after a letter is ơ, as with w ("mowis")
+D75	0	b[i 	bơi 	1	same as "bowi" (D65 kept "b[i" as typed)
+D75	0	tr]owngf 	trường 	1	] after a letter is ư
+D75	0	t[i] 	t[i] 	0	code stays: "tơiư" is no syllable
+D75	0	arr[i] 	arr[i] 	0	code stays
+D75	0	[link] 	[link] 	0	a [ at the start of a word is still a bracket

@@ -1582,6 +1582,22 @@ static bool asRawWord(const Uint32* keys, const int& count, char* out) {
     return true;
 }
 
+/** asRawWord for English-mode keys with [ ] typed inside a word as ơ / ư (D75, Mac): each is written as the same
+ *  letter typed with w ("m[is" is "mowis", "b][c" "buwowc"). False for any other key, or a word that starts with [ ]. */
+static bool asBracketRawWord(const Uint32* keys, const int& count, char* out) {
+    int n = 0;
+    for (int x = 0; x < count; x++) {
+        if (n + 2 >= AS_KEY_LEN) return false;
+        char c = asLetterOf(keys[x]);
+        Uint16 k = (Uint16)(keys[x] & CHAR_MASK);
+        if (c) out[n++] = c;
+        else if (IS_BRACKET_KEY(k) && x > 0) { out[n++] = k == KEY_LEFT_BRACKET ? 'o' : 'u'; out[n++] = 'w'; }
+        else return false;
+    }
+    out[n] = 0;
+    return true;
+}
+
 /** The keys that aren't letters are only [ ] typed as ơ / ư: one for each ơ / ư they made (D65). Such keys are no
  *  English word. A [ that stayed a bracket ("the[[") or any other key doesn't count. */
 static bool asBracketVowelsOnly(const Uint32* keys, const int& count) {
@@ -2301,13 +2317,14 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     if (!asEnabled() || count < 2 || count >= MAX_BUFF - 1) return false;
     asInitLetters();
     char raw[AS_KEY_LEN];
-    if (!asRawWord(keys, count, raw)) return false;
+    bool brackets = false;   //[ ] typed as ơ / ư: no English word, as in Vietnamese mode (D65, D75)
+    if (!asRawWord(keys, count, raw) && !(brackets = asBracketRawWord(keys, count, raw))) return false;
     //2+ capitals: acronyms and identifiers stay as typed. All capitals (Caps Lock Vietnamese, "COONG") may still
     //convert, but only to a common syllable and never when the keys are English (USA, EST stay): D23
     bool allCaps = true;
     for (int x = 0; x < count; x++) if (!(keys[x] & CAPS_MASK)) allCaps = false;
     if (!asFewCapitals(keys, count) && !allCaps) return false;
-    int en = asEnglishScore(raw);
+    int en = brackets ? AS_MISSING : asEnglishScore(raw);
 
     Uint32 result[MAX_BUFF];
     int resultCount;

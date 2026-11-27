@@ -88,7 +88,7 @@ static void press(char c) {
         return;
     }
     // English mode: same logic as HandleEnglishKeyForAutoSwitch
-    if (isLetter(lc)) {
+    if (isLetter(lc) || (vTelexStyle == 0 && (c == '[' || c == ']') && enCount > 0)) {   // [ ] inside a word: ơ / ư (D75)
         if (enCount < MAX_BUFF - 2) enKeys[enCount++] = key | (caps ? CAPS_MASK : 0); else enValid = false;
         screen.push_back(c); return;
     }
