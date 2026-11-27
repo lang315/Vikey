@@ -5,6 +5,28 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 75. Mac, English mode: [ and ] inside a word are ơ / ư: "m[is" becomes "mới"
+
+**Status:** Bug fix, Mac only, in review (2026-11-27).
+
+**Problem.** The user's report: "version mới nhất" sometimes came out as "version m[is nhất". The user types ơ with [. With auto switch on, "verrsion" (a doubled key) switched to English, and in English mode [ and ] stayed brackets (D65, "Not covered"): the Mac app's English word ended at the [ as at an opening bracket, so "m" and "is" were two words, and the engine's English-mode check took only letters. "nhaats" next to it still became "nhất". Typed with w ("mowis") it worked.
+
+**Fix.** On the Mac, the user chose to change only the Mac app:
+- `HandleEnglishKeyForAutoSwitch` (`VikeyCore.mm`) keeps a [ or ] in the word when the word already has a key, Telex style only (Simple Telex keeps brackets as punctuation, D56). A [ at the start of a word is still an opening bracket, and a ] in a word that began right after a [ closes it ("[x]", "- [x] done"). Shift+[ and Shift+] (`{` `}`) are not changed.
+- `vAutoSwitchCheckEnglishWord` takes [ ] that don't start the word: no English word (as in Vietnamese mode, D65), scored as the same word typed with w ("m[is" as "mowis"), and replayed as typed. It converts only when every [ ] made an ơ / ư: a [ the engine keeps as a bracket starts a new word there, and the replay would be only that word's end ("list[s]," gave "sư,").
+- Windows, Linux and the Driver (iPhone, Android) never send [ ] to the check, so they don't change; the simulator, which the Driver is checked against, doesn't either. `test/harness.cpp` follows the Mac.
+- Found in review: the first version deleted text ("list[s]," gave "sư,", "board[d]" "dư") and turned the ] of "[x]" into ư ("- [x] done" gave "- [xư done").
+
+Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i]", "arr[i]", "[link]", "list[s],", "board[d]", "- [x] done", "[s]", "see [ch]").
+
+**Result.**
+- Rules: all pass, the 12 D75 cases added. Goldens, Telex lock, metrics, Driver parity: unchanged.
+- Measured (scratch script): the 1262 Telex lock syllables with ơ / ư typed with [ ] instead of w, in English mode: 0 → 1257 give the Vietnamese word. The 5 left ("hu[u", "k]ng", "qu[nx") are the D65 leftovers. Where the w form stays English and the [ form converts: "b[" is "bơ" ("bow" stays), "v[s" "vớ".
+- Code and Markdown in English mode stay as typed: 36000 cases from the 1500 most common English words ("word[i]", "word[s],", "[c] word", "[word]", "- [x] word", "word[]"): 8 change, all "sex" to "sẽ" after "[x]", as on main. Also "x[i]", "obj[key].", "the[[".
+
+**Not covered.**
+- Any word with [ ] inside that replays to a syllable converts, even where it was meant as a bracket: "m[ " is "mơ", "h[i " is "hơi" in English mode, as in Vietnamese mode.
+- Windows, Linux, iPhone and Android keep [ ] as brackets in English mode.
 ## 74. A d later in a plain word stays d: "did" stays "did", not "đi"
 
 **Status:** Bug fix, in review (2026-11-27).

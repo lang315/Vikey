@@ -407,3 +407,15 @@ D74	1	ddid 	did 	1	a later d in a word with đ still undoes it (review: was "đi
 D74	1	dieenjd 	điện 	1	a d at the end of a word with a Vietnamese mark still makes đ (review: was "dieenjd")
 D74	1	duowcjd 	được 	1	same with ươ
 D74	1	difd 	đì 	1	same with only a tone
+D75	1	verrsion m[is nhaats 	version mới nhất 	1	the user's report: after an English word, an ơ typed with [ ("m[is") stayed "m[is"
+D75	0	m[is 	mới 	1	English mode: [ after a letter is ơ, as with w ("mowis")
+D75	0	b[i 	bơi 	1	same as "bowi" (D65 kept "b[i" as typed)
+D75	0	tr]owngf 	trường 	1	] after a letter is ư
+D75	0	t[i] 	t[i] 	0	code stays: "tơiư" is no syllable
+D75	0	arr[i] 	arr[i] 	0	code stays
+D75	0	[link] 	[link] 	0	a [ at the start of a word is still a bracket
+D75	0	list[s], 	list[s], 	0	a [ the engine keeps as a bracket starts a new word there: keep the keys (review: was "sư,")
+D75	0	board[d] 	board[d] 	0	same (review: was "dư ")
+D75	0	- [x] done 	- [x] done 	0	a ] in a word right after [ closes it (review: was "- [xư done")
+D75	0	[s] 	[s] 	0	same (review: was "[sư")
+D75	0	see [ch] 	see [ch] 	0	same (review: was "see [chư")

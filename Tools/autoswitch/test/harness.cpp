@@ -30,6 +30,7 @@ static Uint16 keyOf(char c) {
     return 0xFFFF;
 }
 static bool enAfterDouble = false;
+static bool enOpenBracket = false;
 static int enNavOff = 0;   // D51: ← count away from the English word's end; like _enNavOffset, any other key, click or switch resets it
 static bool isLetter(char c) { return c >= 'a' && c <= 'z'; }
 static char16_t charOf(Uint32 d) { return (d & CHAR_CODE_MASK) ? (char16_t)(d & 0xFFFF) : (char16_t)keyCodeToCharacter(d); }
@@ -88,7 +89,7 @@ static void press(char c) {
         return;
     }
     // English mode: same logic as HandleEnglishKeyForAutoSwitch
-    if (isLetter(lc)) {
+    if (isLetter(lc) || (vTelexStyle == 0 && (c == '[' || (c == ']' && !enOpenBracket)) && enCount > 0)) {   // [ ] inside a word: ơ / ư (D75)
         if (enCount < MAX_BUFF - 2) enKeys[enCount++] = key | (caps ? CAPS_MASK : 0); else enValid = false;
         screen.push_back(c); return;
     }
@@ -99,6 +100,7 @@ static void press(char c) {
     bool fixAt = wordEnd && key != KEY_RETURN;   // Enter sends what's on screen (D62)
     int count = enCount; bool valid = enValid; enCount = 0;
     enValid = key == KEY_SPACE || key == KEY_RETURN || (key == KEY_9 && caps) || key == KEY_LEFT_BRACKET || key == KEY_QUOTE;
+    enOpenBracket = c == '[';   // the next word began right after a [: its ] closes it (D75)
     bool afterDouble = enAfterDouble; enAfterDouble = false;
     if (afterDouble && fixAt && vAutoSwitchFixDoubledKey(enKeys, count)) {
         prevN = 0; applyOutput(key, caps); return;
