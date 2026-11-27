@@ -5,6 +5,29 @@ Each entry records what was asked, what was decided, and its status. Newest firs
 
 Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built yet), **Rejected**.
 
+## 74. Only dd typed together makes đ: "did" stays "did", not "đi"
+
+**Status:** Bug fix, in review (2026-11-27).
+
+**Problem.** The user's report: pressing d sometimes turns a d into đ. In a word that starts with d, a d typed anywhere later put the stroke on the first letter, as in OpenKey: "did" gave "đi", "dad" "đa", "Dad" "Đa", "dodo" "đô", "dand" "đan". These are real syllables, so the auto switch kept them in Vietnamese (D18 counted did/đi as a tie). In chat, "Dad just called" came out as "Đa just called" and "Did anyone…" as "Đi anyone…".
+
+**Fix.** The d key makes đ only when the key before it is the d (`handleMainKey`, D branch), so every platform gets it. Cases tagged D74 in `rules.tsv`. "ddi" is still "đi", "Ddi" "Đi", and a third d still undoes the stroke ("dddi" is "ddi").
+
+**Result.**
+- Rules: all pass, the 8 D74 cases added.
+- Measured (scratch script, against D73): the 1311 words of `en_50k.txt` with two or more d, lowercase and capitalized (2622), typed in Vietnamese mode. 146 changed, all 146 now show as typed. 36 had a đ ("did" "đi", "dad" "đa", "deed" "đê", "defend" "đền"; 10 of them now switch to English), 110 showed as typed already but now stay in Vietnamese mode ("dude", "died", "daddy", "didnt", "dodge").
+- `test/bulk.py`: English words typed in Vietnamese mode still wrong after space 317 → 307 of 20000 (3.38% → 3.04% of usage); English words wrongly converted in English mode 89 → 85; Vietnamese numbers unchanged.
+- Chat corpus (with and without typos) and synthetic corpus: "Dad", "Did" and "did" in English sentences now come out as typed. Manual switches 57 → 54 (chat), 67 → 64 (chat with typos), 108 → 107 (synthetic); wrong words unchanged.
+- Chat with typos: the slip "ddeed" (meant "ddeef", "đề") now shows "ddeed" as typed, not "ddee". Both are wrong.
+- Telex lock: unchanged (11092 lines).
+- Stretch lock: "dadaaa" and "dodooo" show as typed (were "đaaa", "đooo").
+- Realistic typing (`rules/golden/rtsim.json`): words fixed by hand after a typo 561 → 556, after Backspace into the word 424 → 422.
+
+**Not covered.**
+- People who typed the d at the end ("did" for "đi") must now type "ddi".
+- A later d no longer undoes the đ either: "ddid" is "đid" (was "did"). The undo needs the third d typed right after ("dddi").
+- English words with a second d that Telex leaves alone ("dude", "dodge", "deduct", "dedicate", "dudeee") no longer switch to English: the switch came from the đ it had to take back. They stay in Vietnamese mode with the right text, like "dead" and "added".
+
 ## 73. Undoing â/ê/ô/ă/ơ/ư on a word's first letter that has a tone typed a NUL character
 
 **Status:** Bug fix, in review (2026-11-12). Numbered D62 until the sync with upstream 1.0.34, which has its own D62 (Enter sends what's on screen).

@@ -303,7 +303,7 @@ Anh ơi, lần sau đừng quên gửi tiền điện nha	Anh ơi, lần sau đ�
 I forgot my password again, can someone help me?	I forgot my password again, can someone help me?
 Má ơi, em đi học thêm về, tối muộn mới về	Má ơi, em đi học thêm về, tối muộn mới về
 Chị ơi, mẹ bảo đi chợ mua cas và rau cho cơm tối	Chị ơi, mẹ bảo đi chợ mua cas và rau cho cơm tối
-Đa just called, he's stuck in traffic and will be home late	Dad just called, he's stuck in traffic and will be home late
+Dad just called, he's stuck in traffic and will be home late	Dad just called, he's stuck in traffic and will be home late
 Em tìm được cái áo mà mẹ định mua chưa?	Em tìm được cái áo mà mẹ định mua chưa?
 Anh có thể check lại hpsa đơn internet này không? Sao tăng giá rồi	Anh có thể check lại hpsa đơn internet này không? Sao tăng giá rồi
 Does anyone know a good mechanic near our house?	Does anyone know a good mechanic near our house?
@@ -955,7 +955,7 @@ mình vừa push fix cho issue  512, ai review một chút được không	mình
 The frontend team reported that the API response is sometimes null, need to check	The frontend team reported that the API response is sometimes null, need to check
 Tối nay deploy nha, ai free không để monitor? Rất quan trọng lần này	Tối nay deploy nha, ai free không để monitor? Rất quan trọng lần này
 vừa commit unit test cho auth module, coverage từ 45  lên 72 	vừa commit unit test cho auth module, coverage từ 45  lên 72 
-Đi anyone else encounter the CÓ error when calling the new endpoint?	Did anyone else encounter the CORS error when calling the new endpoint?
+Did anyone else encounter the CÓ error when calling the new endpoint?	Did anyone else encounter the CORS error when calling the new endpoint?
 bug critical ở payment gateway, tất cả stop làm cái khác, focus vào này	bug critical ở payment gateway, tất cả stop làm cái khác, focus vào này
 mình ssuwar xong database query, performance improvement gần 60 	mình ssuwar xong database query, performance improvement gần 60 
 Merge PR  256 vào main branch đi, staging test xong hết rồi	Merge PR  256 vào main branch đi, staging test xong hết rồi
@@ -1256,7 +1256,7 @@ Các con yêu, mẹ vừa nấu xong cơm chiều, ai về sớm ăn cơm không
 Mẹ ơi, con còn ở công ty, khoảng 7h tối mới về được	Mẹ ơi, con còn ở công ty, khoảng 7h tối mới về được
 Ừ, mẹ để nóng trong nồi cho, đừng để nguội đâu	Ừ, mẹ để nóng trong nồi cho, đừng để nguội đâu
 Bố có muốn con mua thêm cá không? Bác Tư có cá tươi hôm nay	Bố có muốn con mua thêm cá không? Bác Tư có cá tươi hôm nay
-Đa, you want me to grab some fish from Uncle Tu's? He has fresh fish today	Dad, you want me to grab some fish from Uncle Tu's? He has fresh fish today
+Dad, you want me to grab some fish from Uncle Tu's? He has fresh fish today	Dad, you want me to grab some fish from Uncle Tu's? He has fresh fish today
 Không cần, mẹ đã mua rồi, toàn cá tươi đây	Không cần, mẹ đã mua rồi, toàn cá tươi đây
 Vậy con không cần lo, mẹ đã sắp xếp hết	Vậy con không cần lo, mẹ đã sắp xếp hết
 Con gái ơi, đạo này tiền điện tăng lên quá, nhà mình tiêu bao nhiêu vậy?	Con gái ơi, đạo này tiền điện tăng lên quá, nhà mình tiêu bao nhiêu vậy?
@@ -1453,7 +1453,7 @@ No problem, contact me lại if it doesn't update	No problem, contact me lại i
 Bạn ơi, sao mấy cái report của tôi bị trống, có sự cố gì không?	Bạn ơi, sao mấy cái report của tôi bị trống, có sự cố gì không?
 Hmm, what metrics are you trying to export?	Hmm, what metrics are you trying to export?
 Dashboard tôi chọn date range từ tháng này, nhưng nó chỉ show data từ tuần trước	Dashboard tôi chọn date range từ tháng này, nhưng nó chỉ show data từ tuần trước
-That's strange, đi you refresh the page?	That's strange, did you refresh the page?
+That's strange, did you refresh the page?	That's strange, did you refresh the page?
 Refresh rồi nhưng vẫn vậy, có phải do timezone setting không?	Refresh rồi nhưng vẫn vậy, có phải do timezone setting không?
 Ah, that could be it! Check your timezone settings in profile	Ah, that could be it! Check your timezone settings in profile
 Đúng rồi! Mình chưa cập nhật timezone, bây giờ okay rồi	Đúng rồi! Mình chưa cập nhật timezone, bây giờ okay rồi
@@ -1584,7 +1584,7 @@ Exactly, let's just enjoy the evening together	Exactly, let's just enjoy the eve
 Mà anh, em muốn hỏi cái chuyewnj với cái project này	Mà anh, em muốn hỏi cái chuyewnj với cái project này
 Chuyện gì vậy?	Chuyện gì vậy?
 Anh có gặp vấn đề nào với manager không? Em nghe công ty bạn anh khó tính lắm	Anh có gặp vấn đề nào với manager không? Em nghe công ty bạn anh khó tính lắm
-Không có vấn ddee gì đâu, sao em hỏi? Có sao không?	Không có vấn ddee gì đâu, sao em hỏi? Có sao không?
+Không có vấn ddeed gì đâu, sao em hỏi? Có sao không?	Không có vấn ddeed gì đâu, sao em hỏi? Có sao không?
 Thôi, em chỉ lo cho anh. Sợ anh stress quá	Thôi, em chỉ lo cho anh. Sợ anh stress quá
 Anh cảm ơn, nhưng anh ổn mà. Chỉ là bthuwowfng công việc thôi	Anh cảm ơn, nhưng anh ổn mà. Chỉ là bthuwowfng công việc thôi
 haha okee, anh don't overwork yourself	haha okee, anh don't overwork yourself

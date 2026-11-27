@@ -1272,7 +1272,8 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
         isCorect = false;
         isChanged = false;
         k = _index;
-        for (i = 0; i < _consonantD.size(); i++) {
+        //only dd typed together makes đ: a d later in the word ("did", "dad") is a letter, not "đi", "đa" (D74)
+        for (i = 0; _index > 0 && CHR(_index - 1) == KEY_D && i < _consonantD.size(); i++) {
             if (_index < _consonantD[i].size())
                 continue;
             isCorect = true;
