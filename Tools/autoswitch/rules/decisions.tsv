@@ -31,3 +31,9 @@ D54	open	Linux pre-edit in apps that never report the surrounding text: needs a 
 D55	none	packaging (Arch Linux)
 D59	test	iOS/Tests/KeyboardSystemParityTests.swift::testColonAndSemicolonStay
 D61	test	Tools/autoswitch/driver/undo_test.cpp::booj source vaay <, ; Windows/Tests/cases.tsv::late_comma_keeps_fix_D61 ; Linux/Tests/cases-linux.tsv::late_comma_keeps_fix_D61 ; Tools/autoswitch/sim/rtsim.cpp::late-punct
+D63	test	iOS/Tests/SuggestLMTests.swift::testTwoKeySlipIsFixed ; iOS/Tests/SuggestLMTests.swift::testRealWordsAndShortWordsStay
+D64	test	iOS/Tests/KeyboardPerformanceTests.swift::testOpeningReadsNoModelFiles ; iOS/Tests/KeyboardPerformanceTests.swift::testOpeningTime
+D65	test	iOS/Tests/KeyboardPerformanceTests.swift::testSpaceAfterAFinishedWord ; iOS/Tests/KeyboardPerformanceTests.swift::testEnglishMidWordTouchFollowsTheSentence ; iOS/Tests/KeyboardPerformanceTests.swift::testTouchTimeEnglish
+D66	test	iOS/Tests/KeyboardPerformanceTests.swift::testVietnameseMidWordTouchFollowsTheSentence ; iOS/Tests/SuggestLMTests.swift::testNextKeysFollowTheSentence ; iOS/Tests/KeyboardPerformanceTests.swift::testTouchTimeVietnamese
+D67	test	iOS/MemoryTests/KeyboardMemoryTests.swift::testAClosedKeyboardLeavesNothingBehind ; iOS/MemoryTests/KeyboardMemoryTests.swift::testOpeningAgainAndAgainDoesNotGrow ; iOS/MemoryTests/KeyboardMemoryTests.swift::testALongSessionStaysUnder40MB
+D68	test	iOS/Tests/EmojiUsageTests.swift::testSameListAsApple ; iOS/Tests/EmojiUsageTests.swift::testSameListAsAppleAfterThousandsOfPicks ; iOS/Tests/EmojiUsageTests.swift::testKeyboardSavesPicksInItsOwnDefaults ; iOS/Tests/EmojiUsageTests.swift::testOldScoresCarryOver

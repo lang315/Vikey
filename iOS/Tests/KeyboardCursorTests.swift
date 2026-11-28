@@ -24,6 +24,7 @@ final class CursorProxy: NSObject, UITextDocumentProxy {
 /// Moving the cursor with a tap while typing (Tony): the keyboard must start over where the cursor is,
 /// never edit the text it was typing before.
 final class KeyboardCursorTests: XCTestCase {
+    override func setUp() { super.setUp(); SuggestLM.warmUpNow() }   // as once the keyboard is up
     private let sender = KeyboardView()
 
     private func make() -> (KeyboardViewController, CursorProxy) {

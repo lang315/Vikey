@@ -44,6 +44,10 @@ FOUNDATION_EXTERN int VKCandidates(const char *typed, const float *_Nullable xs,
                                    const VKKeyRect *keys, int n, VKCandidate *out, int max);
 /// Whether to replace the typed word with out[0] at the space.
 FOUNDATION_EXTERN bool VKShouldCorrect(const char *typed, const VKCandidate *c, int count);
+/// Typed letters that are never replaced: a Vietnamese spelling, chat shorthand, a name people type.
+FOUNDATION_EXTERN bool VKKeepTyped(const char *typed);
+/// The shorthand and names alone, without Vietnamese spellings (English mode: "mu" there is a slip for "my").
+FOUNDATION_EXTERN bool VKKeepWord(const char *typed);
 /// The most common words starting with prefix, both languages, current mode first.
 FOUNDATION_EXTERN int VKCompletions(const char *prefix, int vietnamese, VKCandidate *out, int max);
 

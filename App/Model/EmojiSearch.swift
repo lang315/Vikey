@@ -182,26 +182,77 @@ enum Telex {
     }
 }
 
-/// Frequently used emoji, shared by the Mac panel and the iOS keyboard: each pick adds 1 and every older
-/// score fades a little, so a favorite stays on top but this week's emoji still climbs.
+/// Frequently used emoji, shared by the Mac panel and the iOS keyboard. Apple's rule (EmojiFoundation, iOS 26), D68:
+/// - every pick gets the next number, and a pick made n picks ago weighs 1 / (1 + 0.1 n); an emoji's score is the
+///   sum of its picks, so a favorite stays up for hundreds of picks and today's emoji still climbs;
+/// - the list keeps its order: a picked emoji moves to where its new score fits; a new one comes in while the list
+///   has room, or when it beats the last one, which leaves;
+/// - once there are 1,000 picks, only the last 500 are kept.
 enum EmojiUsage {
-    static let key = "EmojiUsage"
+    static let key = "EmojiRecents"
+    /// Before D68: one fading score per emoji (each pick +1, the others × 0.97). Read once to start the list.
+    static let legacyKey = "EmojiUsage"
+    static let listSize = 30
     /// Until enough picks exist, the block is filled with the emoji people use most.
     static let starter = ["😂", "❤️", "🥰", "😍", "😭", "👍", "🙏", "😊", "🔥", "😘", "🤣", "🥺", "😅", "🎉", "💕", "😁", "🙂", "😉",
                           "🤔", "👏", "😎", "💪", "✨", "😢", "🙌", "💯", "😆", "🤗", "😴", "👌"]
 
+    private struct State {
+        var next = 0                    // the number the next pick gets
+        var picks: [String: [Int]] = [:]
+        var list: [String] = []
+
+        init() {}
+        init?(_ d: UserDefaults) {
+            guard let s = d.dictionary(forKey: EmojiUsage.key) else { return nil }
+            next = s["next"] as? Int ?? 0
+            picks = s["picks"] as? [String: [Int]] ?? [:]
+            list = s["list"] as? [String] ?? []
+        }
+        func save(_ d: UserDefaults) { d.set(["next": next, "picks": picks, "list": list], forKey: EmojiUsage.key) }
+
+        func score(_ e: String) -> Double {
+            (picks[e] ?? []).reduce(0) { sum, p in next - p < 1 ? sum : sum + 1 / (1 + 0.1 * Double(next - p)) }
+        }
+
+        mutating func pick(_ e: String) {
+            picks[e, default: []].append(next)
+            next += 1
+            let s = score(e)
+            if let i = list.firstIndex(of: e) { list.remove(at: i) }
+            else if list.count >= EmojiUsage.listSize, let last = list.last, score(last) < s { list.removeLast() }
+            list.insert(e, at: list.firstIndex { score($0) < s } ?? list.count)
+            if next > 1000 {   // keep the last 500 picks, numbered from 0; their weights stay the same
+                let first = next - 500
+                picks = picks.compactMapValues { ps in
+                    let kept = ps.filter { $0 >= first }.map { $0 - first }
+                    return kept.isEmpty ? nil : kept
+                }
+                next -= first
+            }
+        }
+    }
+
     static func record(_ char: String, in d: UserDefaults) {
-        var s = d.dictionary(forKey: key) as? [String: Double] ?? [:]
-        for k in s.keys { s[k]! *= 0.97 }
-        s[char, default: 0] += 1
-        if s.count > 80 { for (k, _) in s.sorted(by: { $0.value < $1.value }).prefix(s.count - 80) { s[k] = nil } }
-        d.set(s, forKey: key)
+        var s = State(d) ?? State()
+        s.pick(char)
+        s.save(d)
     }
 
     static func frequent(in d: UserDefaults, count n: Int) -> [String] {
-        let s = d.dictionary(forKey: key) as? [String: Double] ?? [:]
-        var list = s.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.map(\.key)
+        var list = State(d)?.list ?? []
         for e in starter where list.count < n && !list.contains(e) { list.append(e) }
         return Array(list.prefix(n))
+    }
+
+    /// Starts the list in `d` from the old scores in `old` (the same defaults on the Mac, the app group on iOS), once:
+    /// lowest score first, each emoji picked about as many times as its score, so the order stays.
+    static func migrate(from old: UserDefaults, to d: UserDefaults) {
+        guard d.object(forKey: key) == nil, let scores = old.dictionary(forKey: legacyKey) as? [String: Double], !scores.isEmpty else { return }
+        var s = State()
+        for (e, v) in scores.sorted(by: { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }) {
+            for _ in 0..<min(20, max(1, Int(v.rounded()))) { s.pick(e) }
+        }
+        s.save(d)
     }
 }

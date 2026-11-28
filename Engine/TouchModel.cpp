@@ -158,6 +158,28 @@ static bool inflected(const char* w) {
 
 const char* TouchModel::keepWords = "";
 
+bool TouchModel::keep(const char* typed) {
+    if (vAutoSwitchIsVietnameseSpelling(typed)) return true;                // a rare but valid syllable (thạnh): keep it
+    return keepWord(typed);
+}
+
+bool TouchModel::keepWord(const char* typed) {
+    // words people really type (ntn, cta, xog, brands…): never "fixed"
+    for (int lo = 0, hi = kKeepWordsCount - 1; lo <= hi; ) {
+        int mid = (lo + hi) / 2, cmp = strcmp(kKeepWords[mid], typed);
+        if (cmp == 0) return true;
+        if (cmp < 0) lo = mid + 1; else hi = mid - 1;
+    }
+    // more words to keep, for experiments (one per line)
+    size_t tl = strlen(typed);
+    for (const char* p = keepWords; *p; ) {
+        const char* e = strchr(p, '\n'); size_t n = e ? (size_t)(e - p) : strlen(p);
+        if (n == tl && !strncmp(p, typed, n)) return true;
+        p += n + (e ? 1 : 0);
+    }
+    return false;
+}
+
 bool TouchModel::shouldCorrect(const char* typed, const TMCandidate* c, int count) {
     if (count == 0 || !strcmp(c[0].letters, typed)) return false;          // best is what was typed
     for (int i = 0; i < count; i++) if (!strcmp(c[i].letters, typed)) return false;   // the typed word is a real word: keep it
@@ -168,20 +190,7 @@ bool TouchModel::shouldCorrect(const char* typed, const TMCandidate* c, int coun
         bool sameEnding = cl >= 2 && L >= 2 && !strcmp(c[0].letters + cl - 2, typed + L - 2) && !strncmp(c[0].letters, typed, 3);
         if (!sameEnding) return false;
     }
-    if (vAutoSwitchIsVietnameseSpelling(typed)) return false;               // a rare but valid syllable (thạnh): keep it
-    // words people really type (ntn, cta, xog, brands…): never "fixed"
-    for (int lo = 0, hi = kKeepWordsCount - 1; lo <= hi; ) {
-        int mid = (lo + hi) / 2, cmp = strcmp(kKeepWords[mid], typed);
-        if (cmp == 0) return false;
-        if (cmp < 0) lo = mid + 1; else hi = mid - 1;
-    }
-    // more words to keep, for experiments (one per line)
-    size_t tl = strlen(typed);
-    for (const char* p = keepWords; *p; ) {
-        const char* e = strchr(p, '\n'); size_t n = e ? (size_t)(e - p) : strlen(p);
-        if (n == tl && !strncmp(p, typed, n)) return false;
-        p += n + (e ? 1 : 0);
-    }
+    if (keep(typed)) return false;
     double margin = count > 1 ? c[0].score - c[1].score : 10;
     // a long word that is no word in either language (nor kept) is almost surely a slip: trust rarer fixes
     size_t L = strlen(typed);

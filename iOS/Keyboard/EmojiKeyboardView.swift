@@ -22,6 +22,9 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
     static let searchHeight: CGFloat = 98     // field + one row of results, above the letter keys
     /// The emoji grid gets taller than the letters, like the system emoji keyboard (Tony: too small)
     static var extraHeight: CGFloat { KeyboardView.tallKeys ? 54 : 53 }   // measured: the system emoji keyboard vs its letters
+    /// Where Frequently Used and the skin tone live: the keyboard's own defaults. Without Full Access a keyboard can only
+    /// read the app group, so what it saved there was gone whenever iOS restarted the keyboard (D68).
+    static var usage = UserDefaults.standard
 
     private struct Category { let title: String; let symbol: String; var items: [Emoji] }
     private var categories: [Category] = []
@@ -54,7 +57,7 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
         return 15
     }()
     static let toneKey = "emojiTone"
-    private var tone: Int { VKSettings.defaults.integer(forKey: Self.toneKey) }
+    private var tone: Int { Self.usage.integer(forKey: Self.toneKey) }
 
     override init(frame: CGRect) {
         grid = UICollectionView(frame: .zero, collectionViewLayout: flow)
@@ -105,6 +108,9 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
     /// when the search box opens, in the background while the user starts typing.
     func load() {
         guard categories.isEmpty else { reloadRecents(); return }
+        // what was saved in the app group before D68 (with Full Access on)
+        EmojiUsage.migrate(from: VKSettings.defaults, to: Self.usage)
+        if Self.usage.object(forKey: Self.toneKey) == nil, let t = VKSettings.defaults.object(forKey: Self.toneKey) { Self.usage.set(t, forKey: Self.toneKey) }
         let all = EmojiIndex.shared.all.filter { $0.version <= Self.maxVersion }
         func g(_ ids: Int...) -> [Emoji] { all.filter { ids.contains($0.group) } }
         let t: [(String, String, String, [Emoji])] = [
@@ -136,7 +142,7 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
 
     private func reloadRecents() {
         guard !categories.isEmpty else { return }
-        let list = EmojiUsage.frequent(in: VKSettings.defaults, count: 30)   // 6 columns of 5, like the system
+        let list = EmojiUsage.frequent(in: Self.usage, count: 30)   // 6 columns of 5, like the system
         categories[0].items = list.compactMap { EmojiIndex.shared.emoji($0) }
         grid.reloadData()
     }
@@ -273,7 +279,7 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
     private func choose(_ text: String, _ e: Emoji) {
         if haptics { feedback?.tick() } else { UIDevice.current.playInputClick() }
         delegate?.emojiKeyboard(self, insert: text)
-        EmojiUsage.record(e.char, in: VKSettings.defaults)
+        EmojiUsage.record(e.char, in: Self.usage)
     }
 
     func scrollViewDidScroll(_ s: UIScrollView) { if !searching { updateTitle() } }
@@ -336,7 +342,7 @@ final class EmojiKeyboardView: UIView, UICollectionViewDataSource, UICollectionV
             if skinFor != nil { skinPopup.track(p) }
         case .ended:
             if let e = skinFor, let i = skinPopup.selectedIndex {
-                VKSettings.defaults.set(i, forKey: Self.toneKey)
+                Self.usage.set(i, forKey: Self.toneKey)
                 choose(i == 0 ? e.char : e.skins[i - 1], e)
                 grid.reloadData()
             }

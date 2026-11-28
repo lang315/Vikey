@@ -4,6 +4,7 @@ import UIKit
 /// The emoji keyboard's flow (open, search, insert, back to letters) and pictures of it at the
 /// widths of the iPhones Vikey runs on, for a visual check.
 final class EmojiKeyboardTests: XCTestCase {
+    override func setUp() { super.setUp(); SuggestLM.warmUpNow() }   // as once the keyboard is up
     private let sender = KeyboardView()
 
     private func make(width: CGFloat) -> (KeyboardViewController, CursorProxy) {

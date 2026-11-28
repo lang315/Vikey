@@ -72,6 +72,15 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private var webFieldsEnglish = true, autoCapitalize = true, doubleSpacePeriod = true, haptics = true
     private var suggestionsOn = true, autoCorrectOn = true
 
+    deinit {
+        // iOS frees this controller but keeps its root view (one per opening, in a keyboard process it reuses for a
+        // long time): with the keys, the strip and the emoji keyboard still in it, each opening kept ~0.5 MB until
+        // iOS killed the keyboard for its memory and showed its own instead (Tony, 1.0.4). Only the empty view stays.
+        let root = viewIfLoaded
+        let empty: () -> Void = { root?.subviews.forEach { $0.removeFromSuperview() } }
+        if Thread.isMainThread { MainActor.assumeIsolated(empty) } else { DispatchQueue.main.async(execute: empty) }
+    }
+
     override func loadView() {
         let v = KeyboardInputView(frame: .zero, inputViewStyle: .keyboard)
         v.allowsSelfSizing = true
@@ -84,6 +93,11 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         keyboard = KeyboardView(frame: view.bounds)
         keyboard.delegate = self
         keyboard.wordContext = { [unowned self] in (self.wordPrefix, self.driver.language == 1) }
+        keyboard.letterOdds = { [unowned self] in   // a touch only looks them up: read between keys
+            if let o = self.englishLetterOdds(compute: false) { return (o, false) }
+            return self.vietnameseKeyOdds(compute: false).map { ($0, true) }
+        }
+        keyboard.wordEnds = { [unowned self] letter in self.wordEnds(before: letter) }
         keyboard.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(keyboard)
         NSLayoutConstraint.activate([
@@ -153,6 +167,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         stallWatch?.invalidate(); stallWatch = nil
         keyboard.feedback.stop()
         KBLog.flush()
+        SuggestLM.coolDown()
         setAI(.none)                   // a late answer must not open the preview off screen
         super.viewWillDisappear(animated)
     }
@@ -299,6 +314,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         keyboard.animatesLanguage = true
         hasAppeared = true
         comingUp = false; setContentVisible(true)
+        // the suggestion models, paged in now the keyboard is up; the strip uses them from then on (SuggestLM.warmUp)
+        SuggestLM.warmUp(vietnameseFirst: driver.language == 1) { [weak self] in self?.scheduleSuggestions() }
         keyboard.playMarkIntro()
         readSelection()   // opened onto text that's already selected
         if !showDebugNudge() { nudgeSoon(after: 2.3) }   // after the mark's intro
@@ -598,6 +615,57 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     /// The word before the cursor as it shows in the field (after Telex: "tôi" for "tooi").
+    /// English mode, a word under way (TapModel): the next letter's chances after the word's letters so far (all of
+    /// them, as shown: also those typed before the keyboard opened) and the words before; one reading per keystroke.
+    private var oddsCache: (key: String, odds: [Double]?)?
+    /// compute false (a touch): only what was read between keys; a miss (two thumbs overlapping: the previous key
+    /// finished in the same touch) leaves the engine's pick.
+    private func englishLetterOdds(compute: Bool = true) -> [Double]? {
+        let word = shownWord
+        guard driver.language == 0, emojiView?.searching != true, !word.isEmpty, word.allSatisfy({ $0.isASCII }), SuggestLM.readyEN,
+              !SuggestLM.shared.isEmpty else { return nil }   // (the emoji search's own field isn't the document)
+        let before = String((lastContext ?? "").dropLast(word.count)), key = before + "\u{1}" + word
+        if let c = oddsCache, c.key == key { return c.odds }
+        guard compute else { return nil }
+        Self.oddsReads += 1
+        let o = SuggestLM.shared.nextLetters(word.lowercased(), before: before)
+        oddsCache = (key, o)
+        return o
+    }
+
+    /// Vietnamese mode, a word under way (TapModel, D66): the next Telex key's chances after the keys typed so far
+    /// and the words before; one reading per keystroke.
+    private var viOddsCache: (key: String, odds: [Double]?)?
+    static var viToneNow = 0.03   // how often a pending tone comes before the word's last letters
+    static var viTapModelOn = true
+    static var oddsReads = 0   // how often the next letter's chances were worked out (tests: never at a touch)
+    private func vietnameseKeyOdds(compute: Bool = true) -> [Double]? {
+        guard Self.viTapModelOn, driver.language == 1, emojiView?.searching != true, !wordPrefix.isEmpty, SuggestLM.readyVI,
+              !SuggestLM.vietnamese.isEmpty else { return nil }
+        let before = String((lastContext ?? "").dropLast(shownWord.count)), key = before + "\u{1}" + wordPrefix
+        if let c = viOddsCache, c.key == key { return c.odds }
+        guard compute else { return nil }
+        Self.oddsReads += 1
+        let o = SuggestLM.vietnamese.nextKeys(wordPrefix, before: before, toneNow: Self.viToneNow)
+        viOddsCache = (key, o)
+        return o
+    }
+
+    /// A touch between the bottom letters and the space bar: space when the word so far is a word (either language)
+    /// and none goes on with `letter`. Not for Telex's x and z in Vietnamese mode (tones).
+    private func wordEnds(before letter: String) -> Bool {
+        // the whole word: in English mode as shown (also letters typed before the keyboard opened), in Vietnamese
+        // mode its Telex keys
+        let w = (driver.language == 0 ? shownWord : wordPrefix).lowercased()
+        guard emojiView?.searching != true, w.count >= 2, w.allSatisfy({ $0.isASCII && $0.isLetter }), !(driver.language == 1 && (letter == "x" || letter == "z")) else { return false }
+        let en = SuggestLM.readyEN && !SuggestLM.shared.isEmpty
+        guard w.withCString({ VKIsWord(0, $0) || VKIsWord(1, $0) }) || (en && SuggestLM.shared.id(w) != nil) else { return false }
+        let next = w + letter.lowercased()
+        var out = [VKCandidate](repeating: VKCandidate(), count: 1)
+        let goesOn = next.withCString { VKCompletions($0, 0, &out, 1) > 0 || VKCompletions($0, 1, &out, 1) > 0 } || (en && SuggestLM.shared.startsWord(next))
+        return !goesOn
+    }
+
     private var shownWord: String {
         let c = lastContext ?? ""
         return String(c.reversed().prefix { $0.isLetter }.reversed())
@@ -609,6 +677,14 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         return withUnsafeBytes(of: &c.text) { raw in
             String(utf16CodeUnits: raw.bindMemory(to: unichar.self).baseAddress!, count: n)
         }
+    }
+
+    /// Whether typed letters go to the English model: always in English mode; in Vietnamese mode when they can't
+    /// spell Vietnamese (Telex keys included: "tooi" can, "peop" can't; a word with Vietnamese letters can).
+    static func isEnglish(_ letters: String, inEnglishMode: Bool) -> Bool {
+        if inEnglishMode { return true }
+        guard !letters.isEmpty, letters.allSatisfy({ $0.isASCII && $0.isLetter }) else { return false }
+        return !letters.lowercased().withCString { VKIsVietnameseSpelling($0) }
     }
 
     /// Capitalised like the typed word ("Teh" → "The").
@@ -628,6 +704,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         guard suggestionsDirty else { return }
         let t0 = CACurrentMediaTime()
         updateSuggestions()
+        _ = englishLetterOdds(); _ = vietnameseKeyOdds()   // read now, between keys, for the next touch (TapModel)
         Diag.suggestMs = max(Diag.suggestMs, (CACurrentMediaTime() - t0) * 1000)
     }
 
@@ -648,7 +725,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if gap > 0.05 { KBLog.add("stall \(Self.time(gap * 1000)) after key=\(Diag.lastKind)") }
     }
 
-    func updateSuggestions() {
+    /// The strip for the word being typed. `correctionOnly`: just decide what space would put in (willCorrect,
+    /// pendingFix), for a word ended before its strip came: the strip itself is about to give way to next words.
+    func updateSuggestions(correctionOnly: Bool = false) {
         suggestionsDirty = false
         if KeyboardView.barOn, correctsHere, showSpecialSuggestions() { return }
         guard KeyboardView.barOn, correctsHere, !wordPrefix.isEmpty, !shownWord.isEmpty else {
@@ -670,6 +749,18 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         willCorrect = autoCorrectOn && wordCaps < 2 && keepWord != typed && wordPrefix.count >= 3
             && typed.withCString { t in candidates.withUnsafeBufferPointer { VKShouldCorrect(t, $0.baseAddress!, n) } }
         pendingFix = willCorrect ? candidates.first.map { (cased(Self.text(of: $0)), $0.vietnamese == 1) } : nil
+        // English: ways to finish the word, ranked by the words before it (SuggestLM). In Vietnamese mode too, for
+        // letters that can't be Vietnamese ("peop", "resi"; not "the", which can)
+        let lm = SuggestLM.readyEN && !SuggestLM.shared.isEmpty && Self.isEnglish(typed, inEnglishMode: driver.language == 0) ? SuggestLM.shared : nil
+        // letters that start English words aren't a typo: "resi" goes on to resident, not to "res"
+        if willCorrect, let lm, let fix = pendingFix,
+           lm.prefersFinishing(typed, over: fix.text, before: String((lastContext ?? "").dropLast(shownWord.count))) { willCorrect = false; pendingFix = nil }
+        // English slips onto neighbouring keys, read back with the words before: fixes the engine's one-key edits
+        // miss ("rhonk" → think) or that the sentence makes clear ("want yo" → to, two letters included)
+        if autoCorrectOn, let lm, touched, wordCaps < 2, keepWord != typed, typed.count >= (Self.slipStrict ? 3 : 2),
+           let fix = slipFix(lm, typed: typed, before: String((lastContext ?? "").dropLast(shownWord.count)), keys: rects) {
+            pendingFix = (cased(fix), false); willCorrect = true
+        }
         // "dont" → "don't" from the keys typed (in Vietnamese mode "thats" shows as "thát" until the end of
         // the word); a common Vietnamese word in Vietnamese mode stays ("im")
         let shownNow = shownWord
@@ -682,8 +773,24 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if autoCorrectOn, keepWord != typed, let r = textReplacements[typed] {   // the user's own shortcuts win
             pendingFix = (r, driver.language == 1); willCorrect = true
         }
-        var comp = [VKCandidate](repeating: VKCandidate(), count: 6)
-        let m = suggestionsOn ? typed.withCString { VKCompletions($0, vi, &comp, 6) } : 0
+        if correctionOnly { return }
+        // Vietnamese: the engine's ways to finish the keys (Telex-aware), its Vietnamese ones re-ranked by the words
+        // before them (SuggestLM.vietnamese)
+        let viLM = vi == 1 && lm == nil && SuggestLM.readyVI && !SuggestLM.vietnamese.isEmpty ? SuggestLM.vietnamese : nil
+        let maxComp = viLM == nil ? 6 : 10
+        var comp = [VKCandidate](repeating: VKCandidate(), count: maxComp)
+        let m = suggestionsOn ? typed.withCString { VKCompletions($0, vi, &comp, Int32(maxComp)) } : 0
+        if let viLM, m > 1 {
+            let found = Array(comp.prefix(Int(m)))
+            let p = viLM.probabilities(found.map { $0.vietnamese == 1 ? Self.text(of: $0) : "" },
+                                       before: String((lastContext ?? "").dropLast(shownWord.count)))
+            // Vietnamese words the model knows by its probability, then the rest as the engine had them
+            let order = found.indices.sorted { a, b in
+                let (pa, pb) = (found[a].vietnamese == 1 ? p[a] : -1, found[b].vietnamese == 1 ? p[b] : -1)
+                return pa != pb ? pa > pb : a < b
+            }
+            for (i, j) in order.enumerated() { comp[i] = found[j] }
+        }
         let shown = shownWord
         var cells: [Suggestion] = [Suggestion(text: shown, quoted: true)]
         var seen: Set<String> = [shown.lowercased()]
@@ -692,8 +799,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             guard cells.count < 3, !seen.contains(t.lowercased()) else { return }
             seen.insert(t.lowercased()); cells.append(Suggestion(text: t, highlighted: highlight))
         }
-        if willCorrect, let fix = pendingFix, !seen.contains(fix.text.lowercased()) {
+        if willCorrect, let fix = pendingFix, fix.text != shown, !cells.dropFirst().contains(where: { $0.text == fix.text }) {   // "i" → "I" shows too
             seen.insert(fix.text.lowercased()); cells.append(Suggestion(text: fix.text, highlighted: true))
+        }
+        if suggestionsOn, let lm {
+            // the system keyboard's way: while the letters start a word, ways to finish it come first
+            var finishes = lm.completions(typed, before: String((lastContext ?? "").dropLast(shown.count)), limit: 3)
+            // a whole word with little to finish it: its possessive, as the system keyboard offers ("darkness's")
+            if finishes.count < 2, lm.id(typed) != nil, !typed.hasSuffix("'s") { finishes.append(typed + "'s") }
+            for f in finishes where cells.count < 3 {
+                let t = cased(f)
+                guard !seen.contains(t.lowercased()) else { continue }   // already shown (the highlighted fix, say)
+                seen.insert(t.lowercased()); cells.append(Suggestion(text: t))
+            }
         }
         if suggestionsOn {
             // a typed word that isn't a word: fixes first; otherwise ways to finish it
@@ -706,9 +824,32 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         keyboard.suggestions = cells
     }
 
+    /// The word the taps of `typed` were most likely meant to spell, when that is clearly not `typed` itself: its
+    /// closeness to the taps plus its likelihood after `before` beats the typed letters' by a margin (more when the
+    /// typed letters are a word themselves). Never for shorthand the engine keeps, nor, in Vietnamese mode, letters that
+    /// spell Vietnamese (in English mode "mu" is a slip for "my", not mù).
+    static var slipMargin = 3.0, slipMarginWord = 4.0
+    /// Decision 26's limits: never a real word (either language), a Vietnamese spelling or under 3 letters.
+    static var slipStrict = true
+    private func slipFix(_ lm: SuggestLM, typed: String, before: String, keys: [VKKeyRect]) -> String? {
+        if Self.slipStrict {
+            guard !typed.withCString({ VKKeepTyped($0) || VKIsWord(0, $0) || VKIsWord(1, $0) }), lm.id(typed) == nil else { return nil }
+        } else {
+            guard !typed.withCString({ driver.language == 0 ? VKKeepWord($0) : VKKeepTyped($0) }) else { return nil }
+        }
+        let reads = lm.readTaps(zip(wordXs, wordYs).map { (x: $0, y: $1) }, keys: keys, before: before)
+        guard let best = reads.first, best.word.lowercased() != typed else { return nil }
+        let typedIsWord = lm.id(typed) != nil
+        let typedScore = reads.first { $0.word.lowercased() == typed }?.score
+            ?? (typedIsWord ? log(max(lm.probabilities([typed], before: before)[0], 1e-12)) : -40)   // its own keys: closeness ~0
+        guard best.score - typedScore > (typedIsWord ? Self.slipMarginWord : Self.slipMargin) else { return nil }
+        // letters on their way to a likelier word ("peop" → people) aren't a slip for a word of their length ("prop")
+        return lm.prefersFinishing(typed, over: best.word, before: before) ? nil : best.word
+    }
+
     /// Space after a word: put in the correction (like the system keyboard). Returns true when it typed the space itself.
     private func autoCorrectAtBreak(_ end: String = " ") -> Bool {
-        updateSuggestionsIfNeeded()       // typed faster than the strip: decide on the whole word now
+        if suggestionsDirty { updateSuggestions(correctionOnly: true) }   // typed faster than the strip: decide on the whole word now
         guard willCorrect, let fix = pendingFix else { return false }
         replaceWord(with: fix.text, vietnamese: fix.vietnamese, recordUndo: true, then: end)
         return true
@@ -921,7 +1062,7 @@ extension KeyboardViewController: EmojiKeyboardDelegate {
         // nothing typed yet: the frequently used ones, never an empty row (Tony)
         let byChar = { (c: String) in EmojiIndex.shared.emoji(c) }
         let found = emojiQuery.trimmingCharacters(in: .whitespaces).isEmpty
-            ? EmojiUsage.frequent(in: VKSettings.defaults, count: 24).compactMap(byChar)
+            ? EmojiUsage.frequent(in: EmojiKeyboardView.usage, count: 24).compactMap(byChar)
             : EmojiIndex.shared.search(emojiQuery, vietnamese: vi, limit: 80).filter { $0.version <= EmojiKeyboardView.maxVersion }
         ev.setQuery(shown, results: found)
     }
@@ -1003,7 +1144,13 @@ extension KeyboardViewController {
 
     /// The table's next words at once; Apple Intelligence's best guess joins after a short pause (when it differs).
     private func nextWords(_ before: String) -> [String] {
-        var out = NextWords.shared.predict(before: before)
+        // English next words after an English word (in Vietnamese mode: one that can't be Vietnamese)
+        let last = NextWords.lastWords(before).last ?? ""
+        var out = SuggestLM.readyEN && !SuggestLM.shared.isEmpty && (driver.language == 0 || (Self.isEnglish(last, inEnglishMode: false) && SuggestLM.shared.id(last) != nil))
+            ? SuggestLM.shared.nextWords(before: before, limit: 3) : []
+        // Vietnamese next words from the Vietnamese model (in Vietnamese mode, when the last word isn't English)
+        if out.isEmpty, driver.language == 1, SuggestLM.readyVI, !SuggestLM.vietnamese.isEmpty { out = SuggestLM.vietnamese.nextWords(before: before, limit: 3) }
+        if out.isEmpty { out = NextWords.shared.predict(before: before) }
         let key = String(before.suffix(80))
         if AIAssist.available {
             if aiNextFor == key {

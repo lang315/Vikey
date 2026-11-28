@@ -6,7 +6,7 @@
 2. Telex lock: every Vietnamese syllable typed in Vietnamese mode in 3 tone orders must keep
    producing the same text and language.
 3. Metrics: manual switches per 100 words (ideal user) must not get worse.
-4. Stretch lock: words stretched in chat (D63, D69 to D72) must keep producing the same text and language.
+4. Stretch lock: words stretched in chat (D70 to D72, D76, D82) must keep producing the same text and language.
 """
 import json, os, re, subprocess, sys, unicodedata
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -97,7 +97,7 @@ res = subprocess.run([HARNESS, 'lines'], input=''.join(f'1\t{k} \n' for k in cas
 lines = [f'{k}\t{r}' for k, r in zip(cases, res)]
 compare('telex_vn_mode.tsv', lines, lambda o, n: print(f'  {o.split(chr(9))[0]}: before {o.split(chr(9))[1:]!r} now {n.split(chr(9))[1:]!r}'))
 
-# 4. Stretch lock (D63, D69 to D72): words stretched in chat, typed with extra copies of their last a / e / o.
+# 4. Stretch lock (D70 to D72, D76, D82): words stretched in chat, typed with extra copies of their last a / e / o.
 #    The common Vietnamese words with the tone key before, among and after the copies; every ưa word with 1 to 4 extra
 #    a keys and Backspace into them; English words ending in a / e / o in Vietnamese mode. The words are typed
 #    again for the Driver (check.sh: driver == simulator on stretches).
@@ -128,7 +128,7 @@ for w in vi_words:
     if not k or not re.sub('[\u0301\u0300\u0309\u0303\u0323]', '', unicodedata.normalize('NFD', w)).endswith('u\u031ba'): continue   #every ưa word
     for n in range(1, 5): stretch += [k + 'a' * n + t] + ([k[:-1] + t + 'a' * (n + 1)] if t else [])
     stretch += [k + t + 'aaa<', k + t + 'aa<a', k + t + 'aaa<<<a']
-    stretch += [k[0].upper() + k[1:] + 'aaa' + t, k.replace('uw', ']') + 'aaa' + t]   #a capital, ư typed with ] (D65)
+    stretch += [k[0].upper() + k[1:] + 'aaa' + t, k.replace('uw', ']') + 'aaa' + t]   #a capital, ư typed with ] (D78)
 for w in vi_words[:3000]:   #ươ words with oo after (D71), and a letter after a stretch: the Telex undo after all (D72)
     k, t = stretch_keys(w)
     if not k: continue

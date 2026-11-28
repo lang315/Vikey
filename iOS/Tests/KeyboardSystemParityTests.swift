@@ -3,6 +3,7 @@ import UIKit
 
 /// Behaviors copied from the iOS system keyboard (Tony: "learn all of these from the default keyboard").
 final class KeyboardSystemParityTests: XCTestCase {
+    override func setUp() { super.setUp(); SuggestLM.warmUpNow() }   // as once the keyboard is up
     private let sender = KeyboardView()
 
     private func make(_ lang: Int = 0) -> (KeyboardViewController, CursorProxy) {

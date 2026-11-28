@@ -182,6 +182,7 @@ final class EmojiPickerModel: ObservableObject {
         self.vietnamese = vietnamese
         raw = ""; allSelected = false; results = []; selected = 0; lastMouse = NSEvent.mouseLocation; opened += 1
         let byChar = Dictionary(all.map { ($0.char, $0) }, uniquingKeysWith: { a, _ in a })
+        EmojiUsage.migrate(from: .standard, to: .standard)   // the scores before D68
         recents = EmojiUsage.frequent(in: .standard, count: EmojiGridView.columns * 3).compactMap { byChar[$0] }
         relayout()
     }
