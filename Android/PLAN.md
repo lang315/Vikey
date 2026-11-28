@@ -44,7 +44,7 @@ Everything not listed here is the same (same rules, same numbers in dp).
 | Diagnostics line + log | stall watch `CADisplayLink`, memory warning, ~200 KB log | `Choreographer`, `onTrimMemory`, same cap; numbers always `1.00 ms` |
 | Globe | `needsInputModeSwitchKey` | `shouldOfferSwitchingToNextInputMethod`; tap = next keyboard, hold = picker |
 | Keyboard geometry, colours, fonts | 402 pt base | same numbers in dp; VI/EN key semibold (600), key shadow black 0.22 |
-| Emoji keyboard | version table (`maxVersion`) | what the device font draws (`Paint.hasGlyph`); Frequently Used = `EmojiUsage` (fading pick count, 24, starter fill), same as iOS since 2026-10-30 |
+| Emoji keyboard | version table (`maxVersion`) | what the device font draws (`Paint.hasGlyph`); Frequently Used = `EmojiUsage` (fading pick count, 24, starter fill), the rule iOS used until D68 (iOS now ranks like Apple) |
 | Keyboard language | the phone's language (a per-app language never reaches the extension) | same: the IME resolves its strings with the system locale |
 | App: rows, tips, sections, footer, copy (VI + EN) | MainView | same; plus "Choose Vikey as the current keyboard" (Android needs the keyboard selected, not only added) |
 | App language row | opens the app's Settings page | Android 13+: opens Settings › Apps › Vikey › Language (`ACTION_APP_LOCALE_SETTINGS`, `locales_config` vi/en); hidden below API 33 (no per-app language) |

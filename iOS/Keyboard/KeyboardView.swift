@@ -71,8 +71,16 @@ final class KeyboardView: UIView {
     var globeButton: UIButton?
     /// The letters typed so far in the current word and the mode, for the fat-finger model.
     var wordContext: (() -> (prefix: String, vietnamese: Bool))?
+    /// English mode, a word under way: the chances of the next letter (a…z, then the word ending here), from the
+    /// sentence (SuggestLM.nextLetters). Touches then go by TapModel; nil: the engine's fat-finger pick.
+    var letterOdds: (() -> (odds: [Double], vietnamese: Bool)?)?
+    /// Whether the word so far is finished and no word goes on with this letter (a touch just above the space bar
+    /// then types space).
+    var wordEnds: ((String) -> Bool)?
     private var letterRects: [VKKeyRect] = []
     var keyRects: [VKKeyRect] { letterRects }
+    /// Every key on show and where (tests: the tap-area bench).
+    var capFramesForTests: [(kind: KeyKind, frame: CGRect)] { keys.filter { !$0.view.isHidden }.map { ($0.def.kind, $0.view.frame) } }
     private var letterCaps: [Character: KeyCap] = [:]
     private let diagLabel = UILabel()
     var diagnostics: String? {
@@ -466,6 +474,31 @@ final class KeyboardView: UIView {
         return bestD < 44 * 44 ? best : nil   // edges and gaps belong to the nearest key, like the system keyboard
     }
     private func kind(of cap: KeyCap) -> KeyKind? { keys.first { $0.view === cap }?.def.kind }
+    static var tapModelOn = true   // tests: off measures the engine's pick alone
+
+    /// The key a touch at `p` types: the key under it (edges and gaps: the nearest), and near a letter's border the
+    /// letter most likely next (fat-finger). nil: no key, or the globe. Touches and the tap-area tests both use it.
+    func key(at p: CGPoint) -> (cap: KeyCap, kind: KeyKind)? {
+        guard var c = cap(at: p), var k = kind(of: c), k != .globe else { return nil }
+        if layer_ == .letters, Self.tapModelOn, TapModel.competes(k), let o = letterOdds?(), o.odds.count == 27,
+           let picked = TapModel.pick(p, keys: keys.filter { !$0.view.isHidden }.map { ($0.def.kind, $0.view.frame, $0.view) }, odds: o.odds,
+                                      o.vietnamese ? TapModel.vietnamese : TapModel.english) {
+            return picked
+        }
+        // between the bottom letters and the space bar, after a finished word that no word goes on with this letter:
+        // space, as on Apple's keyboard (Tony: "thank you" came out "thanknyou")
+        if layer_ == .letters, case .char(let ch) = k, ch.count == 1, p.y > c.frame.maxY,
+           let sp = keys.first(where: { $0.def.kind == .space && !$0.view.isHidden })?.view,
+           p.y < sp.frame.minY, p.x >= sp.frame.minX, p.x <= sp.frame.maxX, wordEnds?(ch) == true {
+            return (sp, .space)
+        }
+        // only on a letter key: the email/web . @ / .com keys on this page are never swapped for a letter (Tony: . gave n)
+        if case .char(let ch) = k, ch.count == 1, ch.first?.isLetter == true, layer_ == .letters, let ctx = wordContext?(), !letterRects.isEmpty {
+            let picked = ctx.prefix.lowercased().withCString { VKPickLetter(Float(p.x), Float(p.y), $0, ctx.vietnamese ? 1 : 0, letterRects, Int32(letterRects.count)) }
+            if picked != 0, let pc = letterCaps[Character(UnicodeScalar(UInt8(bitPattern: picked)))], let pk = kind(of: pc) { c = pc; k = pk }
+        }
+        return (c, k)
+    }
 
     private var lastHaptic: CFTimeInterval = 0
     /// One vibration per key press at most (overlapping touches in fast typing must not double up).
@@ -501,13 +534,7 @@ final class KeyboardView: UIView {
             // a new touch while another is down: the earlier key is typed now (fast two-thumb typing). First, as it
             // may change the layer (a symbol after a slide off 123 goes back to ABC): the new touch is on those keys
             if let prev = touch, let pk = touchKey { finish(prev, on: pk) }
-            guard var c = cap(at: p), var k = kind(of: c), k != .globe else { continue }
-            // fat-finger: a touch near a letter's border goes to the letter most likely next in this word
-            // only on a letter key: the email/web . @ / .com keys on this page are never swapped for a letter (Tony: . gave n)
-            if case .char(let ch) = k, ch.count == 1, ch.first?.isLetter == true, layer_ == .letters, let ctx = wordContext?(), !letterRects.isEmpty {
-                let picked = ctx.prefix.lowercased().withCString { VKPickLetter(Float(p.x), Float(p.y), $0, ctx.vietnamese ? 1 : 0, letterRects, Int32(letterRects.count)) }
-                if picked != 0, let pc = letterCaps[Character(UnicodeScalar(UInt8(bitPattern: picked)))], let pk = kind(of: pc) { c = pc; k = pk }
-            }
+            guard let (c, k) = key(at: p) else { continue }
             touch = t; touchKey = c; touchStart = p; slideFromLayer = false
             press(c, late: CACurrentMediaTime() - t.timestamp > 0.05)
             switch k {

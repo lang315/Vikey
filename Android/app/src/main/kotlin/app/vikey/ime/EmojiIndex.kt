@@ -91,7 +91,7 @@ class EmojiIndex private constructor(val all: List<Emoji>) {
     }
 }
 
-/** Frequently used emoji (port of EmojiUsage in App/Model/EmojiSearch.swift): each pick adds 1 and every older score
+/** Frequently used emoji (port of EmojiUsage in App/Model/EmojiSearch.swift before D68): each pick adds 1 and every older score
  *  fades a little, so a favorite stays on top but this week's emoji still climbs. Stored as "char\tscore" lines. */
 object EmojiUsage {
     const val KEY = "EmojiUsage"

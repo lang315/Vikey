@@ -27,7 +27,9 @@ echo "==> archived build $VER"
 ls "$APP" | grep -q Assets.car || { echo "FAIL: no Assets.car (app icon)"; exit 1; }
 [ -d "$EXT" ] || { echo "FAIL: keyboard extension missing"; exit 1; }
 
-security unlock-keychain -p "$(grep '^KC_PASS=' ~/.secrets/s10w_signing | cut -d= -f2-)" "$KC" 2>/dev/null || true
+# the skyline-ci keychain's own password (s10w_signing's is another keychain's): a locked keychain makes codesign
+# wait on a password dialog nobody answers
+security unlock-keychain -p "$(cat ~/.secrets/skyline_ci_keychain_pass)" "$KC" || { echo "FAIL: can't unlock $KC"; exit 1; }
 sign() {   # sign <bundle> <profile>
   cp "$2" "$1/embedded.mobileprovision"
   security cms -D -i "$2" > build/pp.plist 2>/dev/null

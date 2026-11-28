@@ -34,6 +34,10 @@ public:
      *  Returns how many (<= max). The typed word itself is included when it is a word. */
     static int candidates(const char* typed, const float* touchX, const float* touchY, int vietnamese,
                           const TMKey* keys, int n, TMCandidate* out, int max);
+    /** Words never replaced: Vietnamese spellings, chat shorthand and names people really type (keepWords). */
+    static bool keep(const char* typed);
+    /** The shorthand and names alone (keepWords), without the Vietnamese spellings. */
+    static bool keepWord(const char* typed);
     /** Whether to replace the typed word with candidates[0] at the space (conservative). */
     static bool shouldCorrect(const char* typed, const TMCandidate* c, int count);
     // tuning (see Tools/autoswitch/touch: chosen by simulation)

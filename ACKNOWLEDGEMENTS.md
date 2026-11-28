@@ -11,7 +11,7 @@ Vikey is built on the code and data below. The app contains only word statistics
 
 ## Word data (counted into the app)
 
-Only frequency counts, word-pair counts and a list of English word forms are built in.
+Only frequency counts, word-pair and word-triple counts, a list of English word forms, and a small next-word network trained on the FineWeb and Reddit text below are built in.
 
 - [FrequencyWords (OpenSubtitles 2018)](https://github.com/hermitdave/FrequencyWords), Hermit Dave (CC BY-SA 4.0)
 - [SCOWL / English Speller Database](https://github.com/en-wl/wordlist), en_US Hunspell dictionary, English word forms (plurals, verb forms). Copyright 2000-2026 by Kevin Atkinson. Permission to use, copy, modify, distribute, and sell any part of the English Speller Database (ESDB, previously known as SCOWLv2), or word lists created from it, is hereby granted without fee, provided that the above copyright notice appears in all copies and that both the above copyright notice and this notice appear in supporting documentation. Kevin Atkinson makes no representations about the suitability of this database for any purpose. It is provided "as is" without express or implied warranty.
@@ -35,4 +35,5 @@ Used only to measure and tune accuracy.
 - [GitHub Typo Corpus](https://github.com/mhagiwara/github-typo-corpus), Hagiwara & Mita, LREC 2020 (research use)
 - [Birkbeck spelling error corpus](https://www.dcs.bbk.ac.uk/~roger/corpora.html), Roger Mitton (free to use)
 - [Lists of common misspellings](https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings), Wikipedia (CC BY-SA 4.0)
+- [Hacker News](https://news.ycombinator.com) comments (the suggestion bar benchmark, Tools/suggest)
 

@@ -280,6 +280,129 @@ The word is remembered for look-back as not English, so English words after it d
 - Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D77.
 - Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
 
+## 69. A word typed twice: "hí hí" stays Vietnamese
+
+**Status:** Agreed (2026-11-26): a bug fix (a user's report, via Tony), in PR #146.
+
+**Problem.** In Vietnamese mode, "his his " gave "his his " and switched to English. The user meant "hí hí", a laugh. "hí" is rare in the word lists (about 8 per million, just below the Vietnamese floor, `AS_VN_FLOOR`), and "his" is very common, so the first word goes English. The second "his" is then typed in English mode and stays English.
+
+**Fix.** English rarely types the same word twice. Vietnamese often does ("hí hí", "hé hé"). The word-pair data (D30) says how often real text doubles each reading.
+- English mode, right after auto switch put a word back to English: the same keys again go Vietnamese, both words, when real text doubles the Vietnamese reading at least 10x more often than the English one. "hí hí" 117 vs "his his" 10; "hé hé" 35 vs 0.
+- Vietnamese mode: the same keys right after a word that stayed Vietnamese, or that auto switch just turned Vietnamese, stay Vietnamese. So "hí hí hí" stays.
+- The pair counts are compared as they are (117 ≥ 10 × 10), without smoothing.
+- After the cursor moves away (←), a word typed there doesn't repeat the one before. Back at the same spot (← →), it still does, like the look-back words (D51).
+- Backspace into that word forgets it: delete both words, type "his " again, and it's English. Backspace over the space only ("hí hí" ⌫ ",") keeps it.
+- Not changed: "his" alone is still English. "yes yes", "test test", "is is", "how how" stay English: real text doubles the English word more.
+
+**Result.** Typing each of the 8,000 most common English words twice in Vietnamese mode: 4 change ("hí hí", "hé hé", "kên kên", "tóp tóp"). Goldens, metrics and realistic typing unchanged. Rules D69 (12 cases), reported bug R22, `driver/undo_test` (3 cases).
+
+## 68. Frequently Used emoji: kept without Full Access, ranked like Apple's (iOS, Mac)
+
+**Status:** Agreed (built), 2026-11-21 (Tony: "My wife is saying that vikey doesn't remember the 💖 emoji she used frequently. Can you check for bugs? Ideally our "frequently" definition should be the same as the default keyboard").
+
+**Cause.** The keyboard saved its picks (and the skin tone) in the app group. Without Full Access, iOS lets a keyboard read the app group but not write to it (Apple: "read-only access to the containing app's shared containers"). The write only lived in the keyboard's memory, so the picks were gone each time iOS restarted the keyboard. The simulator doesn't enforce this, so tests never saw it.
+
+**Fix.** The keyboard keeps Frequently Used and the skin tone in its own defaults (`EmojiKeyboardView.usage`), which it can always write. Picks already in the app group (Full Access on) move over once.
+
+**Decision.** Frequently Used works like Apple's keyboard. The rule was read from Apple's EmojiFoundation (iOS 26.5 simulator) and checked against it:
+- Every pick gets the next number. A pick made n picks ago weighs 1 / (1 + 0.1 n), and an emoji's score is the sum of its picks. Before, each pick added 1 and every older score was multiplied by 0.97, so a favorite faded much faster: a pick 100 picks ago weighed 0.05 (Apple: 0.09), 300 ago 0.0001 (Apple: 0.03).
+- The list keeps its order. A picked emoji moves to where its new score fits. A new emoji comes in while there are fewer than 30, or when it beats the last one, which then leaves. Only the first 30 show.
+- Once there are 1,000 picks, only the last 500 are kept.
+- Until there are enough picks, the block is still filled with Vikey's starter emoji.
+The Mac panel shares the code, so it changes the same way. Android, Windows and Linux keep the old fading scores for now.
+
+**Locked by:** `EmojiUsageTests`:
+- `testSameListAsApple`, `testSameListAsAppleWithManyEmoji`, `testSameListAsAppleWhenFavoritesChange`, `testSameListAsAppleAfterThousandsOfPicks`: the same picks (700 to 2,500) give the same list as Apple's code, in the same order.
+- `testKeyboardSavesPicksInItsOwnDefaults`: a pick on the emoji keyboard is saved in the keyboard's own defaults, nothing goes to the app group, and the next keyboard shows it first.
+- `testOldScoresCarryOver`: the old scores carry over once, in the same order.
+
+## 67. Each opening of the keyboard frees its views; the keyboard's memory is tested (iOS)
+
+**Status:** Agreed (built), 2026-11-18 (Tony: "vikey keyboard still crash, I see this just now"; "Pls add more tests to ensure vikey doesn't go pass 40MB mem usage ever").
+
+**Cause.** iOS keeps one keyboard process for many openings and makes a new controller for each one. It frees the old controller but keeps its root view, and the keys, the strip and the emoji keyboard were still in it. So each opening kept ~0.5 MB. The real keyboard in the simulator, no typing: 17 MB after one opening, 24 MB after 15. Past iOS's limit for a keyboard (~48 MB) after about 70 openings, iOS kills it as it opens and shows its own keyboard instead. That leaves no crash report, and no JetsamEvent showed up on Tony's phone either.
+
+**Fix.** When a controller goes, its root view is emptied (`KeyboardViewController.deinit`). The real keyboard in the simulator, 52 openings: 18 MB, flat.
+
+**Measuring.** `footprint -p <pid>` on the keyboard's process. UI tests (XCUITest, Maestro) load iOS's accessibility frameworks into the keyboard, ~25 MB more: the 50 MB of D66 was mostly that. Open the keyboard with `simctl launch` of a host app instead.
+
+**Locked by:** `VikeyMemoryTests` (a bundle of its own, so its process holds nothing from other tests):
+- `testAClosedKeyboardLeavesNothingBehind`: after typing and the emoji keyboard, a closed keyboard's key view and emoji keyboard are freed.
+- `testOpeningAgainAndAgainDoesNotGrow`: 30 more openings keep under 1.5 MB (+0.2 MB now; +12 MB without the fix).
+- `testALongSessionStaysUnder40MB`: three openings with ~120 words each in English and Vietnamese and an emoji search. What the keyboard adds to the test runner must stay under 40 − 17 MB (a fresh keyboard process is ~17 MB): ~8 MB now, ~25 MB as a keyboard.
+
+## 66. Vietnamese key areas follow the sentence mid-word (iOS)
+
+**Status:** Agreed (built), 2026-11-17 (Tony: "can we make the same improvement for VI mode as well regarding tap areas? but don't use apple as benchmark because apple keyboard for VN sucks").
+
+**Measured.** Our own typing test, not Apple: Vietnamese words from the eval sets, with the text before them, typed in the Telex keys people used (`vikey-data lm_vi/make_type_cases_vi.py`; social, tech and news sets). Each key is a tap scattered like a real touch (`TypingAccuracyTests`, TYPE_MODE=vi). The val split (4,800 words) was used to tune; the test split (4,800 other words) is the result.
+
+**Decision.** In Vietnamese mode, while a word is under way, a touch goes by `TapModel` (D65) with the next Telex key's chances from the Vietnamese model, after the words before (`SuggestLM.nextKeys`):
+- The commonest 25,000 Vietnamese words are spelled in Telex, marks in place (aa aw ee oo ow uw dd) and the tone apart: "người" = nguwowi + f, also nguowi.
+- Tone keys typed after the first vowel count as the tone, wherever they come.
+- A pending tone is the next key once the letters are done (3% of the time before they're done). Otherwise the word ends.
+- Tuned on val: weight 0.8, the sure zone 50% of a key, otherwise English's numbers.
+- When no indexed word goes on from the keys typed (English words, teencode), the engine's pick stays.
+
+The odds are read between keys; a touch only looks them up. The followers of the words before go into one slot per word id (240 KB), cleared when the context changes.
+
+**Result** (test split, 4,800 words): right after autocorrect 94.15% → 96.23%, taps alone right 90.6% → 94.9%, mistyped words 452 → 243, correct words broken 22 → 21. Live in the simulator, the real keyboard: 150 Vietnamese words 149 right, memory peak 50 MB (build 59: 51 MB). Debug touch time: mean 65 µs.
+
+**Locked by:** `KeyboardPerformanceTests.testVietnameseMidWordTouchFollowsTheSentence`: halfway between u and i after "th", "mùa" gives u and "kỳ" gives i; the engine alone gave u for both. `SuggestLMTests.testTelexSpellings`, `testNextKeysFollowTheSentence`. `KeyboardPerformanceTests.testTouchTimeVietnamese`: the odds are never read at a touch; mean under 150 µs.
+
+## 65. English key areas follow the sentence mid-word, like Apple's (iOS)
+
+**Status:** Agreed (built, TestFlight 1.0.4 (62, 63)), 2026-11-17 (Tony: "I want the key tap areas to be as close to apple as possible, in english mode").
+
+**Measured.** Apple's keyboard in the simulator: 48 typing situations (word starts after a word, words half typed), 200 touches each, scattered like real taps (`Tools/suggest/tapsample.py`, AppleRef `testTapMap`). 9,282 usable. `iOS/Tests/TapAreaBenchTests` puts the same touches through Vikey's own touch code; it reproduces the live keyboard on 99.2% of points.
+- Vikey types the same key as Apple at 91.2% of touches: 93.7% at word starts, 88.6% mid-word.
+- Apple agrees with itself only 93.8% when the same 300 points are tapped again: its key areas change with use. Where it does agree with itself, Vikey matches 94.1%.
+- Mid-word, Apple makes the letters the sentence expects bigger ("I want to th": i for think).
+
+**Decision.** In English mode, while a word is under way, a touch on a letter, space, delete or shift goes by `TapModel`, fitted to Apple's touches (`Tools/suggest/tapfit.py`; every 4th situation held out):
+- Each nearby key scores how close the touch is plus how likely it is next. Closeness is a Gaussian, σ 0.30 key widths × 0.25 key heights, with touches counted 0.05 key heights higher. Likelihood comes from the English model, after the words before (`SuggestLM.nextLetters`, weight 0.6). For space it's the chance the word ends; delete and shift have small fixed odds.
+- Inside the middle 70% of a key, that key wins outright.
+- The letter odds are read between keys, after the strip, so a touch only looks them up.
+
+Word starts and Vietnamese mode keep the engine's pick. At word starts the model did worse (93.9% → 92.6%).
+
+**Space above the bar, both modes** (Tony: "thank you" often came out "thanknyou"). A touch between the bottom letters and the space bar types space when two things hold: the word so far is a word in either language, and no word goes on with that letter. Telex's x and z are excepted in Vietnamese mode (tones). Vikey used to split that gap in half. Apple gives it to space when the word looks finished, and keeps letters there while the word can go on. English mid-word, TapModel already weighs space against the letters.
+
+**Result.**
+- Held-out situations: mid-word 88.5% → 90.4% the same as Apple, all touches 91.3% → 92.2% (Apple vs itself: 93.8%).
+- Typing test (1,820 words, `TypingAccuracyTests`, now through the keyboard's own touch code): taps alone right 90.2% → 92.9%, mistyped words 179 → 129, right after autocorrect 96.7% → 97.7%, correct words broken 1 → 1.
+- Touch time in the debug build: mean 41 µs, worst 148 µs.
+
+**Locked by:** `KeyboardPerformanceTests.testSpaceAfterAFinishedWord` ("thank" + a touch under n: space in both modes; "tha": n; Vietnamese "ma" + under x: x); `KeyboardPerformanceTests.testEnglishMidWordTouchFollowsTheSentence`: a measured point between u and i after "I want to th" types i (Apple's answer), u with the model off; the middle of a key types it; Vietnamese mode is unchanged. `testTouchTimeEnglish`: mean under 150 µs, worst under 1.5 ms, debug build.
+
+## 64. The keyboard opens without reading the suggestion models (iOS)
+
+**Status:** Shipped in TestFlight 1.0.4 (60, 61), 2026-11-17 (Tony: "add some test to make sure this never happen again").
+
+**Problem.** Builds 57-59: iOS sometimes showed its own keyboard instead of Vikey, right as it opened. Tony's phone had no crash report and no JetsamEvent: Vikey was too slow to come up, and iOS gave up on it. Since 57, opening read the suggestion models (~70 MB) on the main thread before the keyboard showed. That's slow when the files aren't in memory (after other apps pushed them out), so it happened only sometimes. Simulator, files not cached: opening took ~47 ms, 34-36 ms of it reading models.
+
+**Decision.**
+- Opening the keyboard reads no model file (any `*.bin` in the keyboard's bundle, now or later).
+- Once the keyboard shows, the models are read in the background, the keyboard's language first. The strip uses a model only once it's ready. Until then (~0.1 s) it shows the engine's words, as in 1.0.3.
+- The keyboard going away marks them not ready, so the next opening reads them again in the background (3 ms when still in memory).
+
+**Result.** Simulator, files not cached: opening 47 ms → 10-13 ms (1.0.3: ~12 ms). Debug test build: 4-8 ms.
+
+**Locked by:** `KeyboardPerformanceTests.testOpeningReadsNoModelFiles`. It drops every model file from memory, opens the keyboard in each language (load, appear, the field's text, the queued work, the first strip) and checks that no page of any model file was read and no model is in use; after it shows, the models must load. `testOpeningTime`: opening under 30 ms in the debug build. With build 59's opening put back, both fail: the network files 100% read, opening 36 ms.
+
+## 63. Autocorrect reads slips onto neighbouring keys with the sentence (iOS, English)
+
+**Status:** Shipped in TestFlight 1.0.4 (58, 59), 2026-11-17 (Tony: "merge the PR").
+
+**Problem.** Tony: users feel they mistype more on Vikey than on the system keyboard. Measured in the simulator: 271 English words, every letter tapped with real finger scatter, the same taps on both keyboards. Tap areas weren't the gap (85% of points give the same letter; first letters come out right equally often). Autocorrect was: Apple fixed 56 of the 56 mistyped words, Vikey 52. D26 only tries one-key edits, and doesn't know the sentence.
+
+**Decision.** In English (English mode, or letters that can't be Vietnamese), at the space:
+- Every English word whose letters each lie near their tap is read back, up to two slips onto a neighbouring key. Each is scored by how close the taps were (D26's spread) and how likely the word is after the words before it (the English model in `SuggestLM`).
+- The best word replaces the typed letters when it beats them by a margin.
+- D26's limits still hold: never a real word (either language), a Vietnamese spelling, the keep-list, under 3 letters, or 2+ capitals; never letters on their way to a likelier word ("peop").
+
+**Result.** Offline (1,820 words from real sentences, `iOS/Tests/TypingAccuracyTests`): words right 95.5% → 96.9%, mistyped words fixed 94 → 120 of 175, correct words broken 1 → 1. Relaxing D26 for English mode (two-letter words, real words in context, Vietnamese-looking slips: "want yo" → to, "mu" → my) would give 98.7% and 152 of 175, and matched Apple on the 271 words (100% vs 99.6%). That relaxation was in TestFlight 58 and is Tony's call.
+
 ## 62. Enter sends what's on screen
 
 **Status:** Shipped in 1.0.34 (Mac), 2026-11-15 (Tony's report). Windows, Linux and the phones not released yet.
