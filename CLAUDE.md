@@ -6,6 +6,7 @@ Vietnamese Telex typing with automatic Vietnamese/English switching for macOS, i
 - `Engine/`: shared C++17 engine. A change here ships on every platform. `Driver.cpp` is what the iOS keyboard runs.
 - `App/`: macOS app (Swift). `iOS/`, `Android/`, `Windows/`, `Linux/`: platform apps.
 - `Tools/autoswitch/`: engine harness, simulators, corpora; rule tests in `rules/`.
+- `AGENTS.md`: read before starting a branch, review, PR or upstream sync: steps from task to open PR, each with its done criterion.
 - `DECISIONS.md`: numbered decision log, newest first. `CONTRIBUTING.md`, `TRIAGE.md`: PR and issue rules.
 
 ## Commands
