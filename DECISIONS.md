@@ -9,11 +9,11 @@ Status values: **Shipped** (in a build Tony has), **Agreed** (decided, not built
 
 **Status:** Bug fix, Mac only, in review (2026-11-27).
 
-**Problem.** The user's report: "version mới nhất" sometimes came out as "version m[is nhất". The user types ơ with [. With auto switch on, "verrsion" (a doubled key) switched to English, and in English mode [ and ] stayed brackets (D65, "Not covered"): the Mac app's English word ended at the [ as at an opening bracket, so "m" and "is" were two words, and the engine's English-mode check took only letters. "nhaats" next to it still became "nhất". Typed with w ("mowis") it worked.
+**Problem.** The user's report: "version mới nhất" sometimes came out as "version m[is nhất". The user types ơ with [. With auto switch on, "verrsion" (a doubled key) switched to English, and in English mode [ and ] stayed brackets (D78, "Not covered"): the Mac app's English word ended at the [ as at an opening bracket, so "m" and "is" were two words, and the engine's English-mode check took only letters. "nhaats" next to it still became "nhất". Typed with w ("mowis") it worked.
 
 **Fix.** On the Mac, the user chose to change only the Mac app:
 - `HandleEnglishKeyForAutoSwitch` (`VikeyCore.mm`) keeps a [ or ] in the word when the word already has a key, Telex style only (Simple Telex keeps brackets as punctuation, D56). A [ at the start of a word is still an opening bracket, and a ] in a word that began right after a [ closes it ("[x]", "- [x] done"). Shift+[ and Shift+] (`{` `}`) are not changed.
-- `vAutoSwitchCheckEnglishWord` takes [ ] that don't start the word: no English word (as in Vietnamese mode, D65), scored as the same word typed with w ("m[is" as "mowis"), and replayed as typed. It converts only when every [ ] made an ơ / ư: a [ the engine keeps as a bracket starts a new word there, and the replay would be only that word's end ("list[s]," gave "sư,").
+- `vAutoSwitchCheckEnglishWord` takes [ ] that don't start the word: no English word (as in Vietnamese mode, D78), scored as the same word typed with w ("m[is" as "mowis"), and replayed as typed. It converts only when every [ ] made an ơ / ư: a [ the engine keeps as a bracket starts a new word there, and the replay would be only that word's end ("list[s]," gave "sư,").
 - Windows, Linux and the Driver (iPhone, Android) never send [ ] to the check, so they don't change; the simulator, which the Driver is checked against, doesn't either. `test/harness.cpp` follows the Mac.
 - Found in review: the first version deleted text ("list[s]," gave "sư,", "board[d]" "dư") and turned the ] of "[x]" into ư ("- [x] done" gave "- [xư done").
 
@@ -21,7 +21,7 @@ Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i
 
 **Result.**
 - Rules: all pass, the 12 D75 cases added. Goldens, Telex lock, metrics, Driver parity: unchanged.
-- Measured (scratch script): the 1262 Telex lock syllables with ơ / ư typed with [ ] instead of w, in English mode: 0 → 1257 give the Vietnamese word. The 5 left ("hu[u", "k]ng", "qu[nx") are the D65 leftovers. Where the w form stays English and the [ form converts: "b[" is "bơ" ("bow" stays), "v[s" "vớ".
+- Measured (scratch script): the 1262 Telex lock syllables with ơ / ư typed with [ ] instead of w, in English mode: 0 → 1257 give the Vietnamese word. The 5 left ("hu[u", "k]ng", "qu[nx") are the D78 leftovers. Where the w form stays English and the [ form converts: "b[" is "bơ" ("bow" stays), "v[s" "vớ".
 - Code and Markdown in English mode stay as typed: 36000 cases from the 1500 most common English words ("word[i]", "word[s],", "[c] word", "[word]", "- [x] word", "word[]"): 8 change, all "sex" to "sẽ" after "[x]", as on main. Also "x[i]", "obj[key].", "the[[".
 
 **Not covered.**
@@ -64,65 +64,65 @@ Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i
 
 **Status:** Done in the engine, in review (2026-11-13).
 
-**Problem.** The user's report again: "chữa" with four a keys should show four a. The third a, e or o in a row is the Telex undo of ^: "aa" is "â", "aaa" is "aa". So a stretch showed one letter fewer than its keys: "chuwaaa" gave "chưaa", "cuaaa" gave "cuaa", "aaa" gave "aa". Only "ờ" (D64) kept every key ("ờoo"). The user chose every key for every a, e, o stretch.
+**Problem.** The user's report again: "chữa" with four a keys should show four a. The third a, e or o in a row is the Telex undo of ^: "aa" is "â", "aaa" is "aa". So a stretch showed one letter fewer than its keys: "chuwaaa" gave "chưaa", "cuaaa" gave "cuaa", "aaa" gave "aa". Only "ờ" (D77) kept every key ("ờoo"). The user chose every key for every a, e, o stretch.
 
 **Fix.** Engine only (`insertAOE`, `dropKeptCopy`), so every platform gets it. Cases tagged D72 in `rules.tsv`.
-- The key that undoes a ^ at the end of the word keeps the letter the ^ took, when it is the third of that letter typed in a row with at most one tone key among them (D71): "chưaaa", "cuaaa", "nhéee", "quáaa", "aaa". Every key is a letter, so none is dropped, and the stretch (D63) needs no special count. D70's two-copy rule stays only for Backspace (below).
+- The key that undoes a ^ at the end of the word keeps the letter the ^ took, when it is the third of that letter typed in a row with at most one tone key among them (D71): "chưaaa", "cuaaa", "nhéee", "quáaa", "aaa". Every key is a letter, so none is dropped, and the stretch (D76) needs no special count. D70's two-copy rule stays only for Backspace (below).
 - The tone goes back on the syllable (`checkGrammar`), as before: "chữaaa", "củaaa". When it stays where it is, the output of the undo is kept: `insertMark` rewrites it, counting the kept letter that isn't on screen yet.
-- Two tones among the keys are typed apart, no stretch: "caraja has" switches as before (D68).
-- A tone key after three copies of a / e / o goes on the syllable (D63) unless the keys with the run cut to two end an English word more common than the syllable with that tone, decided as for any word that is both: "pooor" (poor, no "pỏ"), "cheeers", "careeer" keep every key; "beeer" is "bẻee" ("bẻ"), "baaas" "báaa". The syllable's score comes from a scratch replay; a tone key pressed twice in it ("carer") must not switch the language, so the auto switch request and the doubled-key memory are kept around it. Found in review: from three copies on, a tone key in English words became a tone ("cheeers" gave "chéee", "careeer" gave "caeeer").
+- Two tones among the keys are typed apart, no stretch: "caraja has" switches as before (D81).
+- A tone key after three copies of a / e / o goes on the syllable (D76) unless the keys with the run cut to two end an English word more common than the syllable with that tone, decided as for any word that is both: "pooor" (poor, no "pỏ"), "cheeers", "careeer" keep every key; "beeer" is "bẻee" ("bẻ"), "baaas" "báaa". The syllable's score comes from a scratch replay; a tone key pressed twice in it ("carer") must not switch the language, so the auto switch request and the doubled-key memory are kept around it. Found in review: from three copies on, a tone key in English words became a tone ("cheeers" gave "chéee", "careeer" gave "caeeer").
 - A letter after the stretch (not a tone key, not the same letter) means it was the Telex undo after all, as in "xoong", "boong", "oóc": the kept letter goes, the undo key is dropped as before, a tone on it goes back on the syllable, and the whole word is sent again. "xooong" is "xoong", "xooofng" is "xoòng", "ooocx" is "oõc", as before.
 - Backspace in a stretch leaves two copies ("chưaaa" ⌫ is "chưaa"): still a stretch at the end of the word, not a slip (D10), when their keys are in a row (one tone key may come among them) and Telex dropped no key. Typed, two copies give a ^ ("chuâ"), and "caraja" ("cạa", a key dropped) stays a slip.
 
 **Result.**
-- Rules: 36 cases of D18, D63, D69, D70, D71, D73 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
+- Rules: 36 cases of D18, D76, D82, D70, D71, D73 show one letter more ("quáaaa", "củaaaa", "chữaaaa"); the rest of each case is the same.
 - Telex lock: 9 lines, all a word that is only the stretch: "aaa" "aaa" (was "aa"), "haaa", "ooo". The "oo" syllables ("xoong", "oõc") and "cuooocf", "moooft" are unchanged.
 - Synthetic: "cả AAA game" is now "AAA" (was "AA"): manual switches 110 → 109. Chat with typos: the three slips of D70 show one letter more ("hẹee"). Chat, metrics otherwise: unchanged.
-- Measured (scratch script, against D68): the 3000 most common Vietnamese words ending in a, e or o with two extra copies stay Vietnamese and start with the word 272 → 463 of 620 (tone before or after), 80 → 269 of 363 (tone among). 3764 English words ending in a, e or o with two extra copies in Vietnamese mode: 179 changed. 155 now show as typed ("theee", "tooo", was "thee", "too"; 9 of them now switch to English, "howeee"), 18 show one letter more as before, 2 show as typed but stay Vietnamese ("weee"), 4 names read Vietnamese (D71).
+- Measured (scratch script, against D81): the 3000 most common Vietnamese words ending in a, e or o with two extra copies stay Vietnamese and start with the word 272 → 463 of 620 (tone before or after), 80 → 269 of 363 (tone among). 3764 English words ending in a, e or o with two extra copies in Vietnamese mode: 179 changed. 155 now show as typed ("theee", "tooo", was "thee", "too"; 9 of them now switch to English, "howeee"), 18 show one letter more as before, 2 show as typed but stay Vietnamese ("weee"), 4 names read Vietnamese (D71).
 - The Driver gives the same text as the simulator on all of them (6065 lines, scratch units).
-- Stretch lock (`rules/golden/stretch.tsv`, in `check.sh`): these words, every ưa word with 1 to 4 extra a and Backspace into them, 6993 cases. The Driver types them too ("driver == simulator on stretches"). The D68 engine changes 2842 of them.
+- Stretch lock (`rules/golden/stretch.tsv`, in `check.sh`): these words, every ưa word with 1 to 4 extra a and Backspace into them, 6993 cases. The Driver types them too ("driver == simulator on stretches"). The D81 engine changes 2842 of them.
 - `test/bulk.py`: English words typed in Vietnamese mode still wrong after space 319 → 317 of 20000; the rest unchanged.
 
 **Not covered.**
 - Typing "aa" on its own in Vietnamese mode now takes Backspace: "aaa" is "aaa". Telex with auto switch off changes too ("cuaaar" is "củaaa").
 - A vowel pair typed three times in an English word reads Vietnamese when the syllable is a common word: of 800 such words (aa / ee / oo in the 20,000 most common English words, scratch script), 12 come out worse than on main: "beeer" "bẻee", "beees" "béee", "veeer" "vẻee", "queeer" "quẻee", "rooofs" "róoo", and "cheeese" "chéeee", "geeese" (at the s, "chees" is no English word yet). The rest are as on main or show every key ("pooor").
-- "nhesees " (the tone key pressed twice after the stretch) is put back to its keys without the first press and switches, as "goyyyyyff" (D19, D63): "nheees". On main it was "nhesees" only because Telex had dropped an e.
+- "nhesees " (the tone key pressed twice after the stretch) is put back to its keys without the first press and switches, as "goyyyyyff" (D19, D76): "nheees". On main it was "nhesees" only because Telex had dropped an e.
 - The same screen can come from different keys: "xooong " is "xoong", "xooo⌫ong " is "xooong" (the letters show as typed).
 - More junk words switch to English ("cuaaasn " is "cuaasn"; on main it stayed Vietnamese with the same text). "aa" in a longer word ("xoong") is unchanged.
 - The ^ still shows for a moment at the second key ("chuâ", "cuẩ"): Telex "aa" is "â" (D71).
-- "ơ" + oo keeps its own rule (D64).
+- "ơ" + oo keeps its own rule (D77).
 
 ## 71. The Telex undo of ^ gave back only part of what the ^ took: "nguờoo", "xưân", "nhesee"
 
 **Status:** Done in the engine, in review (2026-11-13).
 
-**Problem.** Left open by D69 and D70.
-- A ^ takes the hook off every vowel of the word ("ưa" + a is "uâ", "ươ" + o is "uô"). The key that undoes the ^ gave back the ơ (D64) and, since D69, an ư guessed from a w typed anywhere in the word. "ươ" + oo with a tone lost the ư: "nguwowfooo" gave "nguờooo".
+**Problem.** Left open by D82 and D70.
+- A ^ takes the hook off every vowel of the word ("ưa" + a is "uâ", "ươ" + o is "uô"). The key that undoes the ^ gave back the ơ (D77) and, since D82, an ư guessed from a w typed anywhere in the word. "ươ" + oo with a tone lost the ư: "nguwowfooo" gave "nguờooo".
 - The ^ sent again only its own letter, not the vowel it took the hook off. The screen kept the ư the word no longer had: "xuwaan " (a w typed by mistake in "xuân") showed "xưân", "tuwaan " showed "tưân", "muwaa" showed "mưâ". With a tone it was right ("chuwaanr" gives "chuẩn"), because the tone sends the whole vowel group again.
 - A stretch with the tone typed among its three keys was a slip (D70 wanted them in a row): "nhesee " ("nhé" + ee), "nheese ", "hasaa ", "quasaa " were put back to their keys and switched to English, "nefee " gave "nefe" (a key lost).
 
 **Fix.** Engine only (`insertAOE`, `asStretchStart`), so every platform gets it. Cases tagged D71 in `rules.tsv`.
-- The ^ remembers the vowels it took a hook off. The key that undoes it right after (tone keys between allowed) gives every one of them back: "ngườooo", "chữaa". This replaces the D69 guess. The memory is cleared at a new word and kept across the scratch replays auto switch runs.
+- The ^ remembers the vowels it took a hook off. The key that undoes it right after (tone keys between allowed) gives every one of them back: "ngườooo", "chữaa". This replaces the D82 guess. The memory is cleared at a new word and kept across the scratch replays auto switch runs.
 - The ^ sends those vowels again with its letter: "xuân", "tuân", "muâ" (as "muẫ" with a tone). The undo sends the hooks it gives back too, also on a vowel after the ^ letter ("a]aa" is "aưa"; found in review, it showed "aua" while the word held "aưa"). The screen used to keep the ư there ("chưâ"); now it shows the word as it is ("chuâ"), as it always did with a tone.
 - Backspace right after that ^ gives the hooks back too: an a too many in "chưa" ("chuâ"), ⌫, a gives "chưa" (was "chua" with a tone; without one the screen kept the ư only because it was out of step with the word).
-- One tone key may come among the three keys of a D70 stretch: "nhée", "nèe", "háa", "quáa" ("nhéee" since D72). Two are typed apart: "caraja has" switches as before (D68).
+- One tone key may come among the three keys of a D70 stretch: "nhée", "nèe", "háa", "quáa" ("nhéee" since D72). Two are typed apart: "caraja has" switches as before (D81).
 
 **Result.**
 - Goldens, metrics, realistic typing, Backspace undo (`driver/undo_test`), the bulk word lists (`test/bulk.py`): unchanged.
-- Measured (scratch script, D69 to D71 together against D68): the 3000 most common Vietnamese words ending in a, e or o, typed with two extra copies. Staying Vietnamese and starting with the word: tone before or after the copies 272 → 462 of 620, tone among them 80 → 269 of 363. None got worse. ("thể" + e is no stretch: e after ê is the Telex undo.)
-- 3764 English words ending in a, e or o, typed in Vietnamese mode with two extra copies: 14 changed. 8 now stay English or keep their letters ("howeee", "oweee", were "hơee", "ơee"). 4 stretched names now read Vietnamese ("miraaa" "mỉaa", "iraaa", "nerooo", "tarooo"), as "cara" stretched does since D63.
+- Measured (scratch script, D70, D71 and D82 together against D81): the 3000 most common Vietnamese words ending in a, e or o, typed with two extra copies. Staying Vietnamese and starting with the word: tone before or after the copies 272 → 462 of 620, tone among them 80 → 269 of 363. None got worse. ("thể" + e is no stretch: e after ê is the Telex undo.)
+- 3764 English words ending in a, e or o, typed in Vietnamese mode with two extra copies: 14 changed. 8 now stay English or keep their letters ("howeee", "oweee", were "hơee", "ơee"). 4 stretched names now read Vietnamese ("miraaa" "mỉaa", "iraaa", "nerooo", "tarooo"), as "cara" stretched does since D76.
 - The Driver gives the same text as the simulator on all of them (6065 lines, scratch units).
 
 **Not covered.**
-- "ưa" + a is still "uâ" and "a" + a is "â" while typing a stretch: "chữa" shows "chuẫ" before "chữaa", as "của" shows "cuẩ" before "củaa" and "ờ" shows "ồ" before "ờoo" (D64). That is the Telex double key; leaving it out would break "aa" = "â" and the fix of a w typed by mistake ("chuwaanr" is "chuẩn").
+- "ưa" + a is still "uâ" and "a" + a is "â" while typing a stretch: "chữa" shows "chuẫ" before "chữaa", as "của" shows "cuẩ" before "củaa" and "ờ" shows "ồ" before "ờoo" (D77). That is the Telex double key; leaving it out would break "aa" = "â" and the fix of a w typed by mistake ("chuwaanr" is "chuẩn").
 
 ## 70. Two copies of a / e / o after the Telex undo are a stretch: "chưaa", "củaa"
 
 **Status:** Done in the engine, in review (2026-11-13).
 
-**Problem.** Found while fixing D69. Two copies at the end of a word are a slip (D10, D63): "khoongg" is put back to its keys. For a, e and o two copies on screen take three keys, the second one making the ^ and the third undoing it, so they are no slip. Still "chuwxaaa " was put back to its keys and switched to English (two switches with the words after it), "cuaaar " gave "cuaar", "chuwaaax " gave "chưaax" (the tone key left as a letter). "chuwaaa " gave "chưaa " only because the word held "chuaa" (D69). The user chose to read them as a stretch.
+**Problem.** Found while fixing D82. Two copies at the end of a word are a slip (D10, D76): "khoongg" is put back to its keys. For a, e and o two copies on screen take three keys, the second one making the ^ and the third undoing it, so they are no slip. Still "chuwxaaa " was put back to its keys and switched to English (two switches with the words after it), "cuaaar " gave "cuaar", "chuwaaax " gave "chưaax" (the tone key left as a letter). "chuwaaa " gave "chưaa " only because the word held "chuaa" (D82). The user chose to read them as a stretch.
 
-**Fix.** (Replaced by D72: a stretch now shows every key, so it has three copies.) At the end of a word and for a tone typed after the stretch, two copies of a, e or o count as a stretch (`asStretchStart`, three copies before) when the keys typed were that letter three times in a row, the Telex undo among them, then only tone keys: "chữaa", "củaa", "chưaa", "báa". Two copies typed apart stay a slip: "caraja has" switches as before (D68). The rest of D63 applies: the syllable before the stretch must pass spell check, and English keys decide as before. Cases tagged D70 in `rules.tsv`.
+**Fix.** (Replaced by D72: a stretch now shows every key, so it has three copies.) At the end of a word and for a tone typed after the stretch, two copies of a, e or o count as a stretch (`asStretchStart`, three copies before) when the keys typed were that letter three times in a row, the Telex undo among them, then only tone keys: "chữaa", "củaa", "chưaa", "báa". Two copies typed apart stay a slip: "caraja has" switches as before (D81). The rest of D76 applies: the syllable before the stretch must pass spell check, and English keys decide as before. Cases tagged D70 in `rules.tsv`.
 
 **Result.**
 - Measured (scratch script) on the 94 lowercase ưa words of `vi_50k.txt` with 2 extra a keys, the tone key at the end or before the a's: 139 cases changed, all real words now keep the ư and stay Vietnamese ("chữaa"); the 4 that switched are corpus junk ("nữưa").
@@ -133,13 +133,13 @@ Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i
 - A tone typed among the three keys ("nhesee ", "nhé" + ee) is a slip as before: the keys are not in a row. Done in D71.
 - A key typed twice by mistake in a word ending in a, e, o can't be told apart from a stretch ("heeej" for "hệ").
 
-## 69. Stretching "chữa" with a lost the ư: "chũaaa"
+## 82. Stretching "chữa" with a lost the ư: "chũaaa"
 
-**Status:** Done in the engine, in review (2026-11-13).
+**Status:** Done in the engine, in review (2026-11-13). Numbered D69 until the sync with upstream iOS 1.0.5, which has its own D69 (A word typed twice: "hí hí" stays Vietnamese).
 
 **Problem.** A user's report: "Căn bệnh khó chữaaaa" came out "Căn bệnh khó chũaaa". A stretched ưa lost its hook: "chữa" + a gave "chuẫ" (ưa + a is uâ, as in "quân", and the ^ took the hook off the ư), and the next a, the Telex undo of ^, gave "chũaa". Every ưa word had it: "nữa", "giữa", "vừa", "mưa" + a tone after the stretch. Without a tone it was hidden: only the â was sent again, so the screen still showed "mưâ", "mưaa" while the word held "muâ", "muaa".
 
-**Fix.** When the a that undoes the ^ follows a plain u (not qu) and a w or ] was typed in the word, the u gets its hook back (D71 replaced this guess: the ^ remembers the hooks it took) and is sent again with the a: "chữaa", "chữaaa", "mừaaa". The undo still takes one a, as in "quáaa" and "củaaa" (D63); since D72 it doesn't ("chữaaaa"). Engine only (`insertAOE`), so every platform gets it. Cases tagged D69 in `rules.tsv`.
+**Fix.** When the a that undoes the ^ follows a plain u (not qu) and a w or ] was typed in the word, the u gets its hook back (D71 replaced this guess: the ^ remembers the hooks it took) and is sent again with the a: "chữaa", "chữaaa", "mừaaa". The undo still takes one a, as in "quáaa" and "củaaa" (D76); since D72 it doesn't ("chữaaaa"). Engine only (`insertAOE`), so every platform gets it. Cases tagged D82 in `rules.tsv`.
 
 **Result.**
 - Goldens, metrics, realistic typing: unchanged (no corpus line stretches an ưa).
@@ -150,9 +150,9 @@ Cases tagged D75 in `rules.tsv`, with code and Markdown that stay as typed ("t[i
 - Between the second and third a the word shows "chuẫ" (ưa + a is uâ); the third a fixes it. Without a tone the screen shows "mưâ" there while the word holds "muâ", as before. The mismatch is fixed in D71; the "chuẫ" stays (Telex double key).
 - ươ + oo ("ươ" + o is uô): not seen in chat. Done in D71.
 
-## 68. A typo in a Vietnamese word switched to English: "bajnn", "viejt", "thaasyy"
+## 81. A typo in a Vietnamese word switched to English: "bajnn", "viejt", "thaasyy"
 
-**Status:** Done in the engine, in review (2026-11-13).
+**Status:** Done in the engine, in review (2026-11-13). Numbered D68 until the sync with upstream iOS 1.0.5, which has its own D68 (Frequently Used emoji kept without Full Access).
 
 **Problem.** A user's report: "when I misspell one word, the word after it switches to English, and I have to delete it and type it again." In Vietnamese mode a word that is in neither word list and is no syllable is put back to its keys and switches to English (unknown foreign words, D8). D9 keeps typos out of that rule, but only words with â ê ô ă ơ ư đ on them, and its syllable count took a tone key or w typed inside the vowels for the end of a syllable. These still switched:
 - a tone mark only: "bajnn" (bạn), "biets" (biết), "viejt" (việt), "tiengs" (tiếng);
@@ -172,93 +172,93 @@ After the switch the next word shows as its keys until its space ("lats", then "
 
 **Fix.** Such a word is no longer an unknown foreign word when all of these hold. Restore-if-wrong-spelling (D10) handles it as it handles "khoongg": it goes back to its keys and the language stays.
 - Its keys are one syllable, counted past the Telex keys typed inside it and with the keys Telex undid on the way ("Asana" is three syllables).
-- Telex undid no key on the way. Restore-if-wrong-spelling would put the word back without it ("caraja has" gave "caraj há", "refeed" gave "refed"), so such a word is put back with every key and switches, as before D68. "cuooocf", "moooft" keep their text and switch again.
+- Telex undid no key on the way. Restore-if-wrong-spelling would put the word back without it ("caraja has" gave "caraj há", "refeed" gave "refed"), so such a word is put back with every key and switches, as before D81. "cuooocf", "moooft" keep their text and switch again.
 - It starts with a lowercase letter, or it is a capitalised slip: its vowels are a Vietnamese vowel group (gi- and qu- included), one edit on the shown word gives a Vietnamese word (a doubled letter dropped, two letters swapped, or a neighbouring key: "Bajnn" shows "Bạnn", "Bạn" is a word), and restore-if-wrong-spelling is on (else the word would stay as Telex made it). Other capitalised words are names and switch as before: "Huawei has a bug", "Casio tax", "Airbnb", "Lyft has a bug", "Deezer tax". Dropping any letter, not only a doubled one, also matched short names ("Lyft" -> "Lỳ", "Lyft has" gave "Lyft há"), and was taken out after review.
 - Measured (scratch scripts) on 369 capitalised slips: 58% stay Vietnamese (0% before). Of 219 brands followed by "tax", 2 now give "tã": Ajv, and Miro (two keys swapped give "mỏi"). Of 211,758 capitalised dictionary words (`/usr/share/dict/propernames`, `web2`), 112 newly stay Vietnamese, mostly obscure (Arist, Baft, Chiro); an English word after them that reads Vietnamese comes out Vietnamese ("Miro tax" gives "Miro tã").
 - The word before doesn't read English at least ~30x more often than Vietnamese (the "thí makes" margin): "This Airbnb" and "makes tiengs" switch as before. After a tie read as Vietnamese the slip stays Vietnamese: "car bajnn" gives "cả bajnn" (it switched before).
-- It is no English word with its last letter stretched ("testtt", D63).
+- It is no English word with its last letter stretched ("testtt", D76).
 
-Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. With restore-if-wrong-spelling off, the typo stays as shown ("bạnn"), as "khoongg" does. Cases tagged D68 in `rules.tsv`.
+Engine only (`asShouldRestoreToEnglishCore`), so every platform gets it. With restore-if-wrong-spelling off, the typo stays as shown ("bạnn"), as "khoongg" does. Cases tagged D81 in `rules.tsv`.
 
 **Result.**
 - Goldens: chat with typos, one line changed: the typo "ddpori" now shows "đpori", the text the corpus meant. Chat and synthetic unchanged.
 - Metrics: chat with typos 70 → 67 manual switches, 7 → 6 wrong words. Chat and synthetic unchanged.
 - Realistic typing, back-into-word slips fixed by hand: 425 → 424.
 - Telex lock: 9 syllables typed with one key too many ("dduwuwcj", "nuwuwax") keep their text and now stay Vietnamese. 3 where Telex undid the key ("cuooocf") switch as before.
-- Rules: "oxy" (D53) and "hoyyyyyf" (D63) keep their text and now stay Vietnamese.
+- Rules: "oxy" (D53) and "hoyyyyyf" (D76) keep their text and now stay Vietnamese.
 
 **Not covered.**
 - A doubled tone key ("coss", "maff") still switches to English in the middle of the word (D5.1, D19). It is now the largest part left.
 - A typo that reads as two syllables: "toota" (tốt), "enen" (nên).
 - A capitalised slip no single edit away from a word, or with an odd vowel group, still switches (42% of those measured). The next word, if clearly Vietnamese, switches back.
-- A slip in a word Telex undid a key of ("thaaasy") switches, as before D68.
+- A slip in a word Telex undid a key of ("thaaasy") switches, as before D81.
 - The typo itself still shows as its keys ("tiengs"), as before (D10).
 - Backspace twice right after such a typo no longer brings the marked word back ("bạnn"): nothing switched, so there is nothing to undo. Backspace goes back into the word as typed, as in "khoongg" (D10). `driver/undo_test` has both cases.
 
-## 67. [ ] and w undoing each other's ơ / ư lost keys: "bow[", "[w"
+## 80. [ ] and w undoing each other's ơ / ư lost keys: "bow[", "[w"
 
-**Status:** Done in the engine, in review (2026-11-13).
+**Status:** Done in the engine, in review (2026-11-13). Numbered D67 until the sync with upstream iOS 1.0.5, which has its own D67 (Each opening of the keyboard frees its views).
 
 **Problem.** [ [ gives [ (the second [ undoes the ơ the first made), and w w gives w. But the undo also ran across keys:
 - [ or ] after an ơ / ư made with w took its place: "bow[" gave "b[", "buw]" and "bw]" gave "b]", "w]" gave "]". The o and w were lost.
 - w after an ơ / ư made with [ ] undid it as if it were made with w: "[w" gave "ow" (an o that wasn't typed), "]w" gave "w" (the ] lost), "][w" gave "uow".
 
-**Fix.** The ơ / ư remembers that a bracket made it (`BRACKET_MASK`, D65):
+**Fix.** The ơ / ư remembers that a bracket made it (`BRACKET_MASK`, D78):
 - [ [ and ] ] undo only an ơ / ư the same bracket made. After one made with w, the bracket is typed after it: "bơ[", "bư]". A word that is no syllable is put back to all its keys at the space ("bow[").
 - w after an ơ / ư made with [ ] gives the bracket back, also when it undoes ươ / ưa / ưi: "[w", "]w", Shift+[ "{w", "][w", "m]aw".
-- [ [, ] ], u [ [, w w, o w w, w [ work as before. Cases tagged D67 in `rules.tsv`.
+- [ [, ] ], u [ [, w w, o w w, w [ work as before. Cases tagged D80 in `rules.tsv`.
 
 **Not covered.**
 - "w]" shows "ưư" until the space puts back "w]".
 - w undoing ươ turns an ư typed with w into u, as before: "w[w" gives "u[w", "thw[w" gives "thu[w" ("wowww" gives "uoww").
 
-## 66. "Thuở" with a capital T came out "Thưở"
+## 79. "Thuở" with a capital T came out "Thưở"
 
-**Status:** Done in the engine, in review (2026-11-13).
+**Status:** Done in the engine, in review (2026-11-13). Numbered D66 until the sync with upstream iOS 1.0.5, which has its own D66 (Vietnamese key areas follow the sentence mid-word).
 
 **Problem.** "thuowr" gives "thuở": after "th", w on "uo" puts the horn on the o only, unless an n follows ("thương"). With a capital T or H ("Thuowr", "tHuowr") it gave "Thưở". The check compared the whole letter, capital bit included, so a capital T was no T.
 
-**Fix.** The check compares the key only (`CHR`), not the capital bit: "Thuở", "tHuở". Typing every Vietnamese syllable of the Telex lock with a capital first letter now gives the lowercase result capitalised (10966 of 10966; was 1 different). Cases tagged D66 in `rules.tsv`.
+**Fix.** The check compares the key only (`CHR`), not the capital bit: "Thuở", "tHuở". Typing every Vietnamese syllable of the Telex lock with a capital first letter now gives the lowercase result capitalised (10966 of 10966; was 1 different). Cases tagged D79 in `rules.tsv`.
 
 **Not covered.**
 - All caps: "OOOCX" gives "OOCX", not "OÕC" (the Telex undo of ô, another path).
 - Tone placement (rules 3.1 and 3.2 in `Engine.cpp`) still compares whole letters, e.g. `TypingWord[VSI] == (KEY_U | TONEW_MASK)`: a capital or standalone ư/ơ doesn't match. No wrong output was found for it (all-caps and capital-first runs of the Telex lock), and those comparisons also leave out toned vowels, so changing them may change lowercase typing.
 
-## 65. Words typed with [ and ] (ơ, ư) work like the same words typed with w
+## 78. Words typed with [ and ] (ơ, ư) work like the same words typed with w
 
-**Status:** Done in the engine, in review (2026-11-13).
+**Status:** Done in the engine, in review (2026-11-13). Numbered D65 until the sync with upstream iOS 1.0.5, which has its own D65 (English key areas follow the sentence mid-word).
 
 **Problem.** In Telex, [ types ơ and ] types ư. Words typed with them went wrong where the same words typed with w did not:
-- A stretched word was put back to its keys: "ddw[jcccc" gave "ddw[jcccc", not "đượcccc"; "m[fiiii", "thw[ngfgggg", "nh]nggggg" the same (D63).
-- o after an ơ typed with [ (D64): "b[ooo" gave "booo", the ơ lost; "b[fooo" gave "b[foo", a key dropped; "m[foooo" and 4 Backspaces gave "m".
+- A stretched word was put back to its keys: "ddw[jcccc" gave "ddw[jcccc", not "đượcccc"; "m[fiiii", "thw[ngfgggg", "nh]nggggg" the same (D76).
+- o after an ơ typed with [ (D77): "b[ooo" gave "booo", the ơ lost; "b[fooo" gave "b[foo", a key dropped; "m[foooo" and 4 Backspaces gave "m".
 - Backspace back into a word with a ] ư rebuilt its keys with w: "ứa" (]as), space, Backspace, space gave "was" in English. An ơ typed with [ was rebuilt as w too.
 - Before a hyphen, a word starting with w and a [ ("w[i-") was put back to its keys as an English compound (Wi-Fi, D23).
 
 **Fix.** Keys with [ or ] are no English word, as everywhere else in auto switch:
 - The stretch check no longer gives up on keys that aren't all letters; the hyphen check leaves such a word alone.
-- The ô made from an ơ typed with [ turns back into ơ at the next o, as after o, w (D64), and the stretch may start at that ơ.
+- The ô made from an ơ typed with [ turns back into ơ at the next o, as after o, w (D77), and the stretch may start at that ơ.
 - An ơ / ư typed with [ ] is marked in the word (`BRACKET_MASK`), so Backspace back into the word rebuilds [ or ] for it, and w for an ư typed with w. Only [ ] that made an ơ / ư skip the English checks; a [ that stayed a bracket doesn't.
 
-Found by typing all 803 syllables with ơ/ư from the Telex lock both ways (w, and [ ]) in 26 Vietnamese-mode contexts and English mode (punctuation, tones, stretches, Backspace, capitals, words around them) and comparing the results. Cases tagged D65 in `rules.tsv`; the harness types Shift+[ and Shift+] as ~ and ^ ({ } are ← →).
+Found by typing all 803 syllables with ơ/ư from the Telex lock both ways (w, and [ ]) in 26 Vietnamese-mode contexts and English mode (punctuation, tones, stretches, Backspace, capitals, words around them) and comparing the results. Cases tagged D78 in `rules.tsv`; the harness types Shift+[ and Shift+] as ~ and ^ ({ } are ← →).
 
 **Not covered.**
 - English mode, decided to keep: [ and ] stay brackets there, so a word typed with them is not changed to Vietnamese ("b[i " stays; "bowi " gives "bơi"). [ is common in code: "t[i]" would become "tơi]".
 - Two copies are still a slip (D10): "ddw[jcc" is put back to its keys, as before. Also when Backspace leaves two: "m[foooo" and 3 Backspaces shows "mờo", and space puts back "m[fo", as "mowfoooo" gives "mowfo" and "thefmmmm" gives "thefmm".
 - Where the w form differs and the [ form is right, nothing changed: all-caps "B~M" is "BƠM" (w: "BOWM", an acronym, D23); "h[i" Backspace is "hơ" (w: "how"); "k]" stays a bracket (k + ư is no syllable, like "kw").
 
-## 64. Stretching "ờ" with o lost the ơ: "ờooo"
+## 77. Stretching "ờ" with o lost the ơ: "ờooo"
 
-**Status:** Done in the engine, in review (2026-11-12).
+**Status:** Done in the engine, in review (2026-11-12). Numbered D64 until the sync with upstream iOS 1.0.5, which has its own D64 (The keyboard opens without reading the suggestion models).
 
 **Problem.** A stretched "ờ", "giờ", "cờ" lost its ơ: "ờ" + o gave "ồ", and the next o was the Telex undo of ^, so "owfooo" gave "òoo" and "giowfooo" gave "giòoo". There was no way to type "ờooo". A stretched "ư" keeps its hook ("ưuuu"), so only ơ had it.
 
-**Fix.** One o after ơ still makes ô, as before. The chat goldens show people use it to fix a w typed by mistake: "tuowoj" is "tuộ", "ddowoj" is "độ". At the next o, when the keys of that ô were o, w, o (tone keys anywhere in between), the undo gives the ơ back with the o the ô took, and the new o after it: "ờ", "ồ", "ờoo", "ờooo". Every key is then a letter, so none is dropped: a word that is no syllable is put back to all its keys ("owooc", was "ooc" in the Telex lock). The stretch (D63) counts a run of plain o from the ơ, so the tone stays on the ơ and the word stays Vietnamese at its end. Cases tagged D64 in `rules.tsv`.
+**Fix.** One o after ơ still makes ô, as before. The chat goldens show people use it to fix a w typed by mistake: "tuowoj" is "tuộ", "ddowoj" is "độ". At the next o, when the keys of that ô were o, w, o (tone keys anywhere in between), the undo gives the ơ back with the o the ô took, and the new o after it: "ờ", "ồ", "ờoo", "ờooo". Every key is then a letter, so none is dropped: a word that is no syllable is put back to all its keys ("owooc", was "ooc" in the Telex lock). The stretch (D76) counts a run of plain o from the ơ, so the tone stays on the ơ and the word stays Vietnamese at its end. Cases tagged D77 in `rules.tsv`.
 
 **Not covered.** "ườ" + oo gives "uờoo": the hook of the ư goes when ơ turns into ô, as before.
 
-## 63. Stretched Vietnamese words stay Vietnamese: "thèmmmm", "gòyyyy", "ỏoooo"
+## 76. Stretched Vietnamese words stay Vietnamese: "thèmmmm", "gòyyyy", "ỏoooo"
 
-**Status:** Done in the engine, in review (2026-11-12). Tried by hand on the Mac app.
+**Status:** Done in the engine, in review (2026-11-12). Tried by hand on the Mac app. Numbered D63 until the sync with upstream iOS 1.0.5, which has its own D63 (Autocorrect reads slips onto neighbouring keys).
 
 **Problem.** People stretch the last sound of a word in chat: "thèmmmm", "gòyyyy", "đâyyyy", "ỏoooo". The test used the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. For the 2326 words whose last letter isn't a/e/o, only 462 came out right. 1071 were put back to their keys and switched to English, and 793 were put back to their keys. While typing, the tone also jumped onto the stretched letters: "gòy" + y gave "goyỳ", "quá" + aa gave "quaaá".
 
@@ -274,10 +274,10 @@ Found by typing all 803 syllables with ơ/ư from the Telex lock both ways (w, a
 
 The word is remembered for look-back as not English, so English words after it don't pull it back ("thèmmmmm the best test").
 
-**Result.** Test set: the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. Stay Vietnamese and start with the word: 673 before, 2698 now. Test set of 5000 English words with two extra copies of the last letter: 24 changed, all to Vietnamese. Most give the same result as the word typed without the stretch: "last" is "lát", "been" is "bên", "worst" is "ướt", "moon" is "môn". "cara", "sara", "tara", "mere" are English when typed normally, but stretched give "cảaa", "sảaa", "tảaa", "mẻee". Goldens other than the Telex lock, metrics, the realistic typing slips and the Driver are unchanged. Rules D63.
+**Result.** Test set: the 3000 most common Vietnamese words, typed in Telex with three extra copies of the last letter. Stay Vietnamese and start with the word: 673 before, 2698 now. Test set of 5000 English words with two extra copies of the last letter: 24 changed, all to Vietnamese. Most give the same result as the word typed without the stretch: "last" is "lát", "been" is "bên", "worst" is "ướt", "moon" is "môn". "cara", "sara", "tara", "mere" are English when typed normally, but stretched give "cảaa", "sảaa", "tảaa", "mẻee". Goldens other than the Telex lock, metrics, the realistic typing slips and the Driver are unchanged. Rules D76.
 
 **Not covered.**
-- Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D64.
+- Stretching a/e/o after â/ê/ô is the Telex undo: "thể" + eee gives "thẻeee", "cô" + ooo gives "coooo". Telex keeps it (the lock pins "aaaa" to "aaa"). o after ơ: D77.
 - Names and foreign words in the Vietnamese list ("harry", "martin") stay English.
 
 ## 62. Enter sends what's on screen

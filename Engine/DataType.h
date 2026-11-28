@@ -102,7 +102,7 @@ struct vKeyHookState {
 //Check whether the data is create by standalone key or not (W)
 #define STANDALONE_MASK                         0x1000000
 
-//A standalone ơ / ư typed with [ or ], not w: Backspace back into the word rebuilds that key (D65)
+//A standalone ơ / ư typed with [ or ], not w: Backspace back into the word rebuilds that key (D78)
 #define BRACKET_MASK                            0x4000000
 
 //Chec whether the data is keyboard code or character code

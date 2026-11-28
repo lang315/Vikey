@@ -89,7 +89,7 @@ static int _asDropN = 0;
 static int _asDropPos[AS_MAX_DROPS];
 static Uint32 _asDropKey[AS_MAX_DROPS];
 //the hooks a ^ took off the vowels ("ưa" + a is "uâ", "ươ" + o is "uô"): where that ^ is, the keys typed up to it,
-//and the vowels that had a hook. The key that undoes that ^ gives them back (D69, D71).
+//and the vowels that had a hook. The key that undoes that ^ gives them back (D82, D71).
 static int _hatPos = -1, _hatState = 0, _hatHornN = 0;
 //the copy a stretch kept (D72): where it is in the word, the key it came with in KeyStates, the word's length then
 static int _keptAt = -1, _keptKey = 0, _keptIndex = 0;
@@ -209,9 +209,9 @@ static bool asTeencodeVowels(const int& from, const int& to) {
     return plainA && plainB && ((a == KEY_I && b == KEY_E) || (a == KEY_O && b == KEY_Y && (!mark || mark == MARK2_MASK)));
 }
 
-/** A stretched ending (D63): "thèmmmm", "gòyyyy", "ỏoooo". Where the run of minRun+ same letters at the end of the
+/** A stretched ending (D76): "thèmmmm", "gòyyyy", "ỏoooo". Where the run of minRun+ same letters at the end of the
  *  word starts, or -1. Same letter, same ^ / ˘ ˀ (so the "ưu" of "cứu" is no run); only its first letter may have a tone.
- *  A run of plain o may start at an ơ ("ờoooo", D64). Only letters that can end a syllable: never the Telex keys
+ *  A run of plain o may start at an ơ ("ờoooo", D77). Only letters that can end a syllable: never the Telex keys
  *  s f r x j w z d, so doubled tone keys (D5.1, D19) stay. */
 static int asStretchStart(const int& minRun) {
     if (_index < 2 || _index >= MAX_BUFF || _statesLost) return -1;
@@ -226,7 +226,7 @@ static int asStretchStart(const int& minRun) {
     while (s > 0 && CHR(s - 1) == key && !(TypingWord[s - 1] & CHAR_CODE_MASK)) {
         Uint32 prev = TypingWord[s - 1] & (TONE_MASK | TONEW_MASK);
         bool horn = key == KEY_O && !shape && prev == TONEW_MASK;
-        if (!horn && (prev != shape || (TypingWord[s - 1] & STANDALONE_MASK))) break;   //only the ơ may be standalone: typed with [ (D65)
+        if (!horn && (prev != shape || (TypingWord[s - 1] & STANDALONE_MASK))) break;   //only the ơ may be standalone: typed with [ (D78)
         s--;
         if ((TypingWord[s] & MARK_MASK) || horn) break;   //the toned letter, or the ơ, starts the run
     }
@@ -460,7 +460,7 @@ static bool asResyncStates() {   //false: the keys couldn't be rebuilt for the w
         Uint32 c = TypingWord[x];
         if (c & CHAR_CODE_MASK) return false;              //a character the keys can't rebuild: leave the list alone
         Uint32 caps = c & CAPS_MASK;
-        if ((c & STANDALONE_MASK) && (c & TONEW_MASK))   //ư from w, or ơ / ư from [ ] (D65)
+        if ((c & STANDALONE_MASK) && (c & TONEW_MASK))   //ư from w, or ơ / ư from [ ] (D78)
             KeyStates[n++] = ((c & BRACKET_MASK) ? (CHR(x) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) : KEY_W) | caps;
         else {
             KeyStates[n++] = CHR(x) | caps;
@@ -876,7 +876,7 @@ void insertMark(const Uint32& markMask, const bool& canModifyFlag) {
     
     findAndCalculateVowel();
     VWSM = 0;
-    //a stretched ending ("gòyyy", "củaaa", "gìiii", D63) is no part of the word here: the syllable alone decides
+    //a stretched ending ("gòyyy", "củaaa", "gìiii", D76) is no part of the word here: the syllable alone decides
     //where the tone goes (the letter after it is no end consonant); the whole word is sent after
     int stretch = asStretchStart(2);   //from the 2nd copy, so the tone never jumps on the way
     Byte whole = _index;
@@ -962,7 +962,7 @@ void insertD(const Uint16& data, const bool& isCaps) {
     hNCC = hBPC;
 }
 
-static bool _hornBack = false;   //this key brought an ơ back with the o the ô took (D64)
+static bool _hornBack = false;   //this key brought an ơ back with the o the ô took (D77)
 static bool _keepBoth = false;   //this key undid a ^ and kept the letter the ^ took: "chưa" + aa is "chưaaa" (D72)
 /** The key just typed is the third of a / e / o typed in a row, at most one tone key among them ("aaa", "asaa", "aasa"):
  *  where the second, the one that made the ^, is in KeyStates, or -1. Two tones among them are typed apart ("caraja"). */
@@ -975,8 +975,8 @@ static int undoKeyInARow(const Uint16& key) {
     }
     return got == 3 ? mid : -1;
 }
-/** The ô at the end of the word was an ơ until the last o: its keys are o, w, o or [, o (D65), with tone keys
- *  anywhere ("owfo", "[fo"). Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D64). */
+/** The ô at the end of the word was an ơ until the last o: its keys are o, w, o or [, o (D78), with tone keys
+ *  anywhere ("owfo", "[fo"). Where that last o is in KeyStates, or -1. Called for the next o, already in KeyStates (D77). */
 static int hornTurnedHat() {
     int x = _stateIndex - 2;
     while (x >= 0 && IS_MARK_KEY((Uint16)(KeyStates[x] & CHAR_MASK))) x--;
@@ -1017,13 +1017,13 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
                 //restore and disable temporary
                 hCode = vRestore;
                 TypingWord[ii] &= ~TONE_MASK;
-                //"ờ" + oo is a stretched o: ơ + o gave ô ("tuowoj" is "tuộ"), the next o brings the ơ back with that o (D64)
+                //"ờ" + oo is a stretched o: ơ + o gave ô ("tuowoj" is "tuộ"), the next o brings the ơ back with that o (D77)
                 if (data == KEY_O && ii == _index - 1 && _index < MAX_BUFF - 1 && (hornO = hornTurnedHat()) >= 0)
                     TypingWord[ii] |= TONEW_MASK;
                 //"chưa" + aa, "của" + aa, "nhé" + ee: a stretch, every key shows (D72). Not for d: "ddd" stays "dd"
                 else if (!IS_KEY_D(data) && ii == _index - 1 && _index < MAX_BUFF - 1 && wordFitsBuffer())
                     keep = undoKeyInARow(data);
-                //"chữa" + aa, "hươ" + oo are stretched: the undo gives back the hooks the ^ took off the other vowels (D69, D71)
+                //"chữa" + aa, "hươ" + oo are stretched: the undo gives back the hooks the ^ took off the other vowels (D82, D71)
                 if (ii == _hatPos && hatJustMade())
                     for (int h = 0; h < _hatHornN; h++)
                         if (_hatHorn[h] != ii) {
@@ -1051,9 +1051,9 @@ void insertAOE(const Uint16& data, const bool& isCaps) {
             hData[_index - 1 - ii] = GET(TypingWord[ii]);
         }
     }
-    for (int p = ii - 1; p >= hornLo; p--) hData[hBPC++] = GET(TypingWord[p]);   //the hooks on screen too (D69)
+    for (int p = ii - 1; p >= hornLo; p--) hData[hBPC++] = GET(TypingWord[p]);   //the hooks on screen too (D82)
     hNCC = hBPC;
-    if (hornO >= 0 || keep >= 0) {   //the o the ô took after the ơ (D64), or the letter the ^ took (D72); this key is added by the caller, vRestore
+    if (hornO >= 0 || keep >= 0) {   //the o the ô took after the ơ (D77), or the letter the ^ took (D72); this key is added by the caller, vRestore
         if (hornO >= 0) _hornBack = true; else _keepBoth = true;
         setKeyData(_index, hornO >= 0 ? KEY_O : data, KeyStates[hornO >= 0 ? hornO : keep] & CAPS_MASK);
         memmove(hData + 1, hData, hNCC * sizeof(hData[0]));
@@ -1083,7 +1083,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
             hCode = vRestore;
             
             for (ii = VSI; ii < _index; ii++) {
-                if ((TypingWord[ii] & BRACKET_MASK) && (TypingWord[ii] & TONEW_MASK))   //ơ / ư typed with [ ]: the bracket comes back (D67)
+                if ((TypingWord[ii] & BRACKET_MASK) && (TypingWord[ii] & TONEW_MASK))   //ơ / ư typed with [ ]: the bracket comes back (D80)
                     TypingWord[ii] = (CHR(ii) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) | (TypingWord[ii] & CAPS_MASK);
                 else
                     TypingWord[ii] &= ~TONEW_MASK;
@@ -1095,7 +1095,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
             hCode = vWillProcess;
             
             if ((CHR(VSI) == KEY_U && CHR(VSI+1) == KEY_O)) {
-                if (VSI - 2 >= 0 && CHR(VSI - 2) == KEY_T && CHR(VSI - 1) == KEY_H) {   //CHR: a capital T or H too (D66)
+                if (VSI - 2 >= 0 && CHR(VSI - 2) == KEY_T && CHR(VSI - 1) == KEY_H) {   //CHR: a capital T or H too (D79)
                     TypingWord[VSI+1] |= TONEW_MASK;
                     if (VSI + 2 < _index && CHR(VSI+2) == KEY_N) {
                         TypingWord[VSI] |= TONEW_MASK;
@@ -1144,7 +1144,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
                     //restore and disable temporary
                     if (TypingWord[ii] & STANDALONE_MASK) {
                         hCode = vWillProcess;
-                        if (TypingWord[ii] & BRACKET_MASK) {   //an ơ / ư typed with [ ]: w gives the bracket back ("[w", D67)
+                        if (TypingWord[ii] & BRACKET_MASK) {   //an ơ / ư typed with [ ]: w gives the bracket back ("[w", D80)
                             hCode = vRestore;
                             TypingWord[ii] = (CHR(ii) == KEY_O ? KEY_LEFT_BRACKET : KEY_RIGHT_BRACKET) | (TypingWord[ii] & CAPS_MASK);
                             isRestoredW = true;
@@ -1197,7 +1197,7 @@ void reverseLastStandaloneChar(const Uint32& keyCode, const bool& isCaps, const 
 
 static bool _afterDigit = false;   //the word started right after a digit: a lone w is a unit (100W), not ư (D33)
 void checkForStandaloneChar(const Uint16& data, const bool& isCaps, const Uint32& keyWillReverse) {
-    //[ [ or ] ] undoes the ơ / ư the first one made; one made with w stays, the bracket comes after it ("bow[", D67)
+    //[ [ or ] ] undoes the ơ / ư the first one made; one made with w stays, the bracket comes after it ("bow[", D80)
     if (_index > 0 && CHR(_index - 1) == keyWillReverse && TypingWord[_index - 1] & TONEW_MASK &&
         (!IS_BRACKET_KEY(data) || (TypingWord[_index - 1] & BRACKET_MASK))) {   //w, [ or ] can start a word
         hCode = vWillProcess;
@@ -1301,7 +1301,7 @@ void handleMainKey(const Uint16& data, const bool& isCaps) {
     
     //if is mark key
     if (IS_MARK_KEY(data)) {
-        //a tone after a stretched ending ("goyyyyyf", D63): the letters before the run are matched, not the run
+        //a tone after a stretched ending ("goyyyyyf", D76): the letters before the run are matched, not the run
         Byte whole = _index;
         int stretch = asStretchStart(3);   //two are a slip, as at the end of the word (D10)
         if (stretch >= 0 && asStretchToneEnglish()) stretch = -1;   //"beeer" is "beer" (D72)
@@ -1602,7 +1602,7 @@ static bool asBracketRawWord(const Uint32* keys, const int& count, char* out) {
     return true;
 }
 
-/** The keys that aren't letters are only [ ] typed as ơ / ư: one for each ơ / ư they made (D65). Such keys are no
+/** The keys that aren't letters are only [ ] typed as ơ / ư: one for each ơ / ư they made (D78). Such keys are no
  *  English word. A [ that stayed a bracket ("the[[") or any other key doesn't count. */
 static bool asBracketVowelsOnly(const Uint32* keys, const int& count) {
     int brackets = 0, made = 0;
@@ -1867,7 +1867,7 @@ static bool asHasLiteralWordShape(const Uint32* keys, int count, bool telexToneE
 }
 
 static Uint16 asKeyOfLetter(char c);
-/** A capitalised slip ("Bajnn" -> Bạnn, D68): the vowels typed are a Vietnamese vowel group, and one edit on the shown
+/** A capitalised slip ("Bajnn" -> Bạnn, D81): the vowels typed are a Vietnamese vowel group, and one edit on the shown
  *  word gives a Vietnamese word ("Bạn"): a doubled letter dropped, two letters swapped or a neighbouring key. Names
  *  stay names: the vowels of Casio, Huawei, Serif are no Vietnamese group, and dropping any letter of a short name
  *  ("Lyft" -> "Lỳ") is too easy a match, so only a repeated letter may go. */
@@ -2025,12 +2025,12 @@ static bool asShouldRestoreToEnglishCore(bool& literalOnly) {
         tempDisableKey = savedTemp;
         if (invalid) {
             //A lowercase marked word of one syllable is a slip in a Vietnamese word ("bajnn", "viejt", "thaasyy"), not
-            //a foreign word: no switch, restore-if-wrong-spelling handles it like "khoongg" (D68). The syllable is
+            //a foreign word: no switch, restore-if-wrong-spelling handles it like "khoongg" (D81). The syllable is
             //counted past the Telex keys typed inside it. Not when Telex undid a key on the way: that path would put
             //the word back without it ("caraja" -> "caraj"). Not a capitalised word (names: "Huawei", "Casio") unless
             //one slip from a word ("Bajnn") and restore-if-wrong-spelling puts it back to its keys, not after a word
             //that leans English ("This Airbnb"; "car bajnn" is "cả"),
-            //and not an English word with its last letter stretched ("testtt", D63).
+            //and not an English word with its last letter stretched ("testtt", D76).
             Uint32 full[MAX_BUFF];
             int n = asStatesWithDrops(full, MAX_BUFF - 1);
             size_t len = strlen(raw);
@@ -2089,7 +2089,7 @@ static bool asShouldRestoreToEnglish(bool& literalOnly) {
     return true;
 }
 
-/** At the end of a word: a stretched Vietnamese word ("thèmmmm", "gòyyyy", "ỏoooo", D63). The word up to the first
+/** At the end of a word: a stretched Vietnamese word ("thèmmmm", "gòyyyy", "ỏoooo", D76). The word up to the first
  *  stretched letter is a syllable, and the keys are no English word, neither as typed nor with the stretched letter
  *  once ("testtt" is "test"). Such a word is not put back to its keys and doesn't switch to English.
  *  2+ capitals keep the acronym rule (D23). */
@@ -2102,7 +2102,7 @@ static bool asStretchedVietnamese() {
     asInitLetters();
     char raw[AS_KEY_LEN];
     bool letters = asRawWord(keys, n, raw);
-    if (!letters && !asBracketVowelsOnly(keys, n)) return false;   //"ddw[jcccc" goes on: [ is ơ, no English word (D65)
+    if (!letters && !asBracketVowelsOnly(keys, n)) return false;   //"ddw[jcccc" goes on: [ is ơ, no English word (D78)
     if (letters && asEnglishScore(raw) != AS_MISSING) return false;
     int en = AS_MISSING;
     if (letters) {
@@ -2127,7 +2127,7 @@ static bool asStretchedVietnamese() {
     return en == AS_MISSING || !(vn == AS_MISSING || (vn < AS_VN_FLOOR && en - vn >= AS_PREFER) || en - vn >= AS_VN_EXTREME);
 }
 
-/** A tone typed after a stretched ending ("goyyyyyf", D63): the whole word is no syllable, so the tone key would be a
+/** A tone typed after a stretched ending ("goyyyyyf", D76): the whole word is no syllable, so the tone key would be a
  *  letter. The syllable before the run decides instead, as if the tone came before it; insertMark leaves the run out. */
 static bool asStretchTakesTone() {
     int s = asStretchStart(3);   //as in handleMainKey
@@ -2154,7 +2154,7 @@ static bool asHyphenRestore() {
     //only words starting with w (Telex "ư"): "nơ-ron", "rơ-moóc", "táp-lô" are Vietnamese loanwords
     if (asLetterOf(KeyStates[0]) != 'w') return false;
     char raw[AS_KEY_LEN];
-    if (!asRawWord(KeyStates, _stateIndex, raw) && asBracketVowelsOnly(KeyStates, _stateIndex)) return false;   //"w[i": no English word (D65)
+    if (!asRawWord(KeyStates, _stateIndex, raw) && asBracketVowelsOnly(KeyStates, _stateIndex)) return false;   //"w[i": no English word (D78)
     int vn = asVietnameseScore(word);
     return vn == AS_MISSING || vn < AS_VN_FLOOR;
 }
@@ -2321,7 +2321,7 @@ bool vAutoSwitchCheckEnglishWord(const Uint32* keys, const int& count,
     if (!asEnabled() || count < 2 || count >= MAX_BUFF - 1) return false;
     asInitLetters();
     char raw[AS_KEY_LEN];
-    bool brackets = false;   //[ ] typed as ơ / ư: no English word, as in Vietnamese mode (D65, D75)
+    bool brackets = false;   //[ ] typed as ơ / ư: no English word, as in Vietnamese mode (D78, D75)
     if (!asRawWord(keys, count, raw) && !(brackets = asBracketRawWord(keys, count, raw))) return false;
     //2+ capitals: acronyms and identifiers stay as typed. All capitals (Caps Lock Vietnamese, "COONG") may still
     //convert, but only to a common syllable and never when the keys are English (USA, EST stay): D23
@@ -2495,7 +2495,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         _asApostrophe = data == KEY_QUOTE && capsStatus != 1;
         //after a space the word was already checked at the space: a later ( . , etc. must not reach back over the space
         //("zẻo" space "(" gave "zzero(", D53; same as the hyphen in D52)
-        bool stretched = asStretchedVietnamese();   //"thèmmmm," stays as it is (D63)
+        bool stretched = asStretchedVietnamese();   //"thèmmmm," stays as it is (D76)
         bool asSwitch = (!stretched && asIsSwitchBreak(event, data, capsStatus, otherControlKey) && _spaceCount == 0 && asShouldRestoreToEnglish(literalOnly)) ||
                         (data == KEY_MINUS && capsStatus != 1 && !otherControlKey && _spaceCount == 0 && asHyphenRestore());   //a hyphen after a space isn't part of the word ("wr -" gave "wr wr-", D52)
         _asApostrophe = false;
@@ -2540,7 +2540,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (!tempDisableKey && vCheckSpelling) {
             checkSpelling(true); //force check spelling
         }
-        bool stretched = asStretchedVietnamese();   //"thèmmmm " stays as it is (D63)
+        bool stretched = asStretchedVietnamese();   //"thèmmmm " stays as it is (D76)
         if (!stretched && asShouldRestoreToEnglish(literalOnly)) { //auto switch: an English word typed in Vietnamese mode
             asRestoreToEnglish(vRestore, literalOnly);
             _spaceCount++;
@@ -2646,7 +2646,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
 
         int shownBefore = dropKeptCopy(data);   //"xooo" + n is "xoon" (D72)
         insertState(data, _isCaps); //save state
-        if (tempDisableKey && IS_MARK_KEY(data) && asStretchTakesTone()) tempDisableKey = false;   //"goyyyyyf" (D63)
+        if (tempDisableKey && IS_MARK_KEY(data) && asStretchTakesTone()) tempDisableKey = false;   //"goyyyyyf" (D76)
         
         if (!IS_SPECIALKEY(data) || tempDisableKey) { //do nothing
             hCode = vDoNothing;
@@ -2686,7 +2686,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             }
         }
 
-        if (!IS_KEY_D(data) && !_hornBack) {   //"ờoo": the tone is on the ơ already (D64)
+        if (!IS_KEY_D(data) && !_hornBack) {   //"ờoo": the tone is on the ơ already (D77)
             //moving the tone onto a just-added ư ("ís" + w -> "iứ"): that ư isn't on screen yet, so one fewer to delete
             //(it took the space before the word: "ab isw" gave "abiứ", D52)
             if (_keepBoth) {   //the letter the ^ took isn't on screen yet: one fewer to delete (D72)
@@ -2703,7 +2703,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         }
         
         if (hCode == vRestore && (_hornBack || _keepBoth)) {
-            insertKey(data, _isCaps);   //every key is a letter again ("owfoo" is "ờoo"): no key dropped (D64)
+            insertKey(data, _isCaps);   //every key is a letter again ("owfoo" is "ờoo"): no key dropped (D77)
             if (_keepBoth) { _keptAt = _index - 2; _keptKey = _stateIndex - 1; _keptIndex = _index; }
         } else if (hCode == vRestore) {
             insertKey(data, _isCaps);
@@ -2937,7 +2937,7 @@ bool vAutoSwitchIsVietnameseSpelling(const char* letters) {
 /** The tone key just typed ends an English word once a stretch of a / e / o before it is cut back to two, and that word
  *  is more common than the syllable with the tone: "pooor" is "poor" (no "pỏ"), "cheeers" "cheers", "careeer" "career".
  *  Every key of the stretch shows (D72), so the third copy is no Telex undo any more. Decided as for any word that is
- *  both (D63): "beeer" stays "bẻee", "beeees" "béeee". */
+ *  both (D76): "beeer" stays "bẻee", "beeees" "béeee". */
 static bool asStretchToneEnglish() {
     Uint32 full[MAX_BUFF];
     int n = asStatesWithDrops(full, MAX_BUFF - 1), x = n - 2, end;

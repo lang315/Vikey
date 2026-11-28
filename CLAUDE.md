@@ -18,10 +18,10 @@ python3 Tools/quality/scorecard.py --compare origin/main   # accuracy and speed 
 Other platforms' tests: table "Where tests go" in `CONTRIBUTING.md`.
 
 ## Engine change workflow
-1. Add cases to `Tools/autoswitch/rules/rules.tsv`, tagged with the decision (`D64`).
+1. Add cases to `Tools/autoswitch/rules/rules.tsv`, tagged with the decision (`D77`).
 2. Add a `## N. ...` entry at the top of `DECISIONS.md` (Status, Problem, Fix, Not covered). `rules/decisions.py` fails when a decision has no test and no reason in `rules/decisions.tsv`.
 3. Run `check.sh`, review the golden diffs, then `check.sh update`. Say in the PR which results changed and why.
-4. Commit subject: `D<N>: <what the user sees>`, e.g. `D64: stretching "ờ" with o kept the ơ ("ờooo")`.
+4. Commit subject: `D<N>: <what the user sees>`, e.g. `D77: stretching "ờ" with o kept the ơ ("ờooo")`.
 
 ## Gotchas
 - `Vikey.xcodeproj` is generated and gitignored: edit `project.yml`.
